@@ -1,12 +1,63 @@
-// Mon compte page + subscription modals
+// Mon compte page + subscription modals — connecté à Supabase
 
-const Account = ({ user, setUser, toast, onLogout }) => {
+const Account = ({ profile, setProfile, session, toast, onLogout }) => {
   const { t, lang, setLang } = useT();
-  const [local, setLocal] = useState(user);
+  const [local, setLocal] = useState(profile ? {
+    firstName: profile.prenom || '',
+    lastName: profile.nom || '',
+    email: profile.email || '',
+    phone: profile.telephone || '',
+  } : { firstName: '', lastName: '', email: '', phone: '' });
+  const [saving, setSaving] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelled, setCancelled] = useState(false);
-  useEffect(() => setLocal(user), [user]);
+
+  useEffect(() => {
+    if (profile) {
+      setLocal({
+        firstName: profile.prenom || '',
+        lastName: profile.nom || '',
+        email: profile.email || '',
+        phone: profile.telephone || '',
+      });
+    }
+  }, [profile]);
+
+  const handleSave = () => {
+    if (!session) return;
+    setSaving(true);
+    api.updateProfile(session.user.id, {
+      prenom: local.firstName,
+      nom: local.lastName,
+      email: local.email,
+      telephone: local.phone,
+      langue_interface: lang,
+    })
+      .then(() => {
+        setSaving(false);
+        const updated = {
+          ...(profile || {}),
+          prenom: local.firstName,
+          nom: local.lastName,
+          email: local.email,
+          telephone: local.phone,
+          langue_interface: lang,
+        };
+        setProfile(updated);
+        window.MOCK.initialUser = { firstName: local.firstName, lastName: local.lastName, email: local.email, phone: local.phone, plan: 'Pro', renewalDate: '' };
+        toast(t("account.saved"));
+      })
+      .catch((err) => {
+        setSaving(false);
+        toast("Erreur : " + (err.message || "sauvegarde échouée"));
+      });
+  };
+
+  const plan = 'Pro';
+  const renewalDate = '';
+
+  const initials = ((local.firstName || '?')[0] + (local.lastName || '?')[0]).toUpperCase();
 
   return (
     <div className="page" style={{ maxWidth: 920 }}>
@@ -14,13 +65,12 @@ const Account = ({ user, setUser, toast, onLogout }) => {
         eyebrow={t("nav.account")}
         title={t("account.title")}
         subtitle={t("account.sub")} />
-      
 
       <div className="card" style={{ padding: 32, marginBottom: 22 }}>
         <div className="between" style={{ marginBottom: 24 }}>
           <h3 className="display" style={{ margin: 0, fontSize: 24, fontWeight: 500 }}>{t("account.infoTitle")}</h3>
           <div className="row gap-12">
-            <div className="avatar" style={{ width: 44, height: 44, fontSize: 14 }}>{local.firstName[0]}{local.lastName[0]}</div>
+            <div className="avatar" style={{ width: 44, height: 44, fontSize: 14 }}>{initials}</div>
           </div>
         </div>
 
@@ -41,8 +91,8 @@ const Account = ({ user, setUser, toast, onLogout }) => {
         </Field>
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24 }}>
-          <button className="btn btn--primary" onClick={() => {setUser(local);toast(t("account.saved"));}}>
-            <I.Check size={14} /> {t("common.save")}
+          <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
+            <I.Check size={14} /> {saving ? "Sauvegarde…" : t("common.save")}
           </button>
         </div>
       </div>
@@ -50,12 +100,12 @@ const Account = ({ user, setUser, toast, onLogout }) => {
       <div className="card" style={{ padding: 32, marginBottom: 22 }}>
         <div className="between" style={{ marginBottom: 18 }}>
           <h3 className="display" style={{ margin: 0, fontSize: 24, fontWeight: 500 }}>{t("account.subTitle")}</h3>
-          <span className={"badge" + (cancelled ? " badge--neutral" : "")}>{cancelled ? t("account.cancelled") : local.plan}</span>
+          <span className={"badge" + (cancelled ? " badge--neutral" : "")}>{cancelled ? t("account.cancelled") : plan}</span>
         </div>
         <div className="between" style={{ alignItems: "flex-end" }}>
           <div>
             <div style={{ fontSize: 14, color: "var(--ink-2)" }}>
-              <span style={{ fontWeight: 500 }}>{local.plan}</span> · {cancelled ? t("account.accessUntil") + " " : t("account.renewing") + " "}{local.renewalDate}
+              <span style={{ fontWeight: 500 }}>{plan}</span> · {cancelled ? t("account.accessUntil") + " " : t("account.renewing") + " "}{renewalDate || "—"}
             </div>
             <p className="muted" style={{ margin: "8px 0 0", fontSize: 13, maxWidth: 480 }}>
               {cancelled ? t("account.cancelledDesc") : t("account.subDesc")}
@@ -73,7 +123,7 @@ const Account = ({ user, setUser, toast, onLogout }) => {
         <div style={{ padding: 36 }}>
           <div className="eyebrow">{t("account.subTitle")}</div>
           <h2 className="display" style={{ fontSize: 32, fontWeight: 500, margin: "8px 0 6px" }}>{t("account.manageTitle")}</h2>
-          <p className="muted" style={{ marginBottom: 24, fontSize: 14 }}><strong style={{ color: "var(--ink)" }}>{local.plan}</strong> · {t("account.renewing")} {local.renewalDate}.</p>
+          <p className="muted" style={{ marginBottom: 24, fontSize: 14 }}><strong style={{ color: "var(--ink)" }}>{plan}</strong> · {t("account.renewing")} {renewalDate || "—"}.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button className="btn btn--secondary btn--block">{t("account.editPayment")}</button>
             <button className="btn btn--block" style={{ background: "var(--red-soft)", color: "var(--red)" }} onClick={() => {setManageOpen(false);setConfirmOpen(true);}}>
@@ -106,7 +156,6 @@ const Account = ({ user, setUser, toast, onLogout }) => {
         </div>
       </Modal>
     </div>);
-
 };
 
 window.Account = Account;

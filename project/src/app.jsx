@@ -1,4 +1,4 @@
-// Top-level app: hash router + state
+// Top-level app: hash router + auth state + Supabase session
 
 function useHashRoute() {
   const get = () => window.location.hash.replace(/^#/, "") || "/";
@@ -15,13 +15,74 @@ function useHashRoute() {
   return [route, navigate];
 }
 
+const LoadingScreen = () => (
+  <div data-no-chrome style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20, background: "var(--bg)" }}>
+    <Brand size={28}/>
+    <div style={{ width: 32, height: 32, border: "2px solid var(--border)", borderTopColor: "var(--gold-deep)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }}/>
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
+
 function AppInner() {
   const [route, navigate] = useHashRoute();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [cvs, setCvs] = useState(MOCK.initialCvs);
-  const [user, setUser] = useState(MOCK.initialUser);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [cvs, setCvs] = useState([]);
   const { Toast: T, show: toast } = useToast();
   const { t } = useT();
+
+  // Charger le profil et les CVs après authentification
+  const loadUserData = (userId) => {
+    return api.getProfile(userId)
+      .then((p) => {
+        setProfile(p);
+        window.MOCK.initialUser = {
+          firstName: p.prenom || '',
+          lastName: p.nom || '',
+          email: p.email || '',
+          phone: p.telephone || '',
+          plan: 'Pro',
+          renewalDate: '',
+        };
+        return api.getCvs(userId);
+      })
+      .then((data) => {
+        setCvs(data);
+      })
+      .catch((err) => {
+        console.error("Erreur chargement données utilisateur:", err);
+      });
+  };
+
+  useEffect(() => {
+    // Vérifier la session initiale
+    api.getSession().then((s) => {
+      setSession(s);
+      if (s) {
+        loadUserData(s.user.id).then(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Écouter les changements d'auth
+    const { data: listener } = api.onAuthChange((event, s) => {
+      setSession(s);
+      if (s) {
+        loadUserData(s.user.id);
+      } else {
+        setProfile(null);
+        setCvs([]);
+        window.MOCK.initialUser = { firstName: '', lastName: '', email: '', phone: '', plan: 'Pro', renewalDate: '' };
+      }
+    });
+
+    return () => {
+      if (listener && listener.subscription) listener.subscription.unsubscribe();
+    };
+  }, []);
 
   // Title resolution
   const titleFor = (r) => {
@@ -34,6 +95,32 @@ function AppInner() {
   };
 
   const isApp = route.startsWith("/app");
+  const isPublicRoute = route.startsWith("/cv/") || route.startsWith("/nfc/");
+
+  // Écran de chargement pendant l'init
+  if (loading) return <LoadingScreen/>;
+
+  // Protéger les routes /app/*
+  if (isApp && !session) {
+    navigate("/auth/login");
+    return null;
+  }
+
+  // Données utilisateur dérivées du profil
+  const user = profile ? {
+    firstName: profile.prenom || '',
+    lastName: profile.nom || '',
+    email: profile.email || '',
+    phone: profile.telephone || '',
+    plan: 'Pro',
+    renewalDate: '',
+  } : window.MOCK.initialUser;
+
+  const handleLogout = () => {
+    api.signOut().then(() => {
+      navigate("/");
+    });
+  };
 
   let page;
   if (route === "/" || route === "") {
@@ -45,23 +132,41 @@ function AppInner() {
   } else if (route === "/auth/forgot") {
     page = <Forgot navigate={navigate}/>;
   } else if (route === "/app/cvs") {
-    page = <MesCV cvs={cvs} setCvs={setCvs} navigate={navigate} toast={toast}/>;
+    page = <MesCV cvs={cvs} setCvs={setCvs} session={session} navigate={navigate} toast={toast}/>;
   } else if (route === "/app/customize") {
     page = <CustomizeSelect cvs={cvs} navigate={navigate}/>;
   } else if (route.startsWith("/app/customize/")) {
     const id = route.split("/").pop();
     const cv = cvs.find((c) => c.id === id);
-    page = <CustomizeEdit cv={cv} onSave={(updated) => setCvs(cvs.map((c) => c.id === updated.id ? updated : c))} onPreview={(cv) => navigate(`/cv/${cv.id}`)} toast={toast} navigate={navigate}/>;
+    page = <CustomizeEdit
+      cv={cv}
+      session={session}
+      onSave={(updated) => setCvs(cvs.map((c) => c.id === updated.id ? updated : c))}
+      onPreview={(cv) => navigate(`/cv/${cv.short_code || cv.id}`)}
+      toast={toast}
+      navigate={navigate}
+    />;
   } else if (route === "/app/analytics") {
     page = <Analytics cvs={cvs}/>;
   } else if (route === "/app/nfc") {
-    page = <NFCPage cvs={cvs} toast={toast}/>;
+    page = <NFCPage cvs={cvs} session={session} toast={toast}/>;
   } else if (route === "/app/account") {
-    page = <Account user={user} setUser={setUser} toast={toast} onLogout={() => navigate("/")}/>;
+    page = <Account
+      profile={profile}
+      setProfile={(p) => {
+        setProfile(p);
+        window.MOCK.initialUser = { firstName: p.prenom, lastName: p.nom, email: p.email, phone: p.telephone || '', plan: 'Pro', renewalDate: '' };
+      }}
+      session={session}
+      toast={toast}
+      onLogout={handleLogout}
+    />;
   } else if (route.startsWith("/cv/")) {
-    const id = route.split("/").pop();
-    const cv = id === "demo" ? cvs[0] : cvs.find((c) => c.id === id);
-    page = <PublicPage cv={cv} user={user} navigate={navigate}/>;
+    const shortCode = route.replace("/cv/", "");
+    page = <PublicPage shortCode={shortCode} navigate={navigate}/>;
+  } else if (route.startsWith("/nfc/")) {
+    const code = route.replace("/nfc/", "");
+    page = <NfcRedirect code={code} navigate={navigate}/>;
   } else {
     page = (
       <div data-no-chrome style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
@@ -76,7 +181,7 @@ function AppInner() {
       {isApp && (
         <React.Fragment>
           <AppHeader title={titleFor(route)} onMenu={() => setDrawerOpen(true)} user={user}/>
-          <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} user={user} currentRoute={route} navigate={navigate} onLogout={() => { setDrawerOpen(false); navigate("/"); }}/>
+          <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} user={user} currentRoute={route} navigate={navigate} onLogout={() => { setDrawerOpen(false); handleLogout(); }}/>
         </React.Fragment>
       )}
       {page}

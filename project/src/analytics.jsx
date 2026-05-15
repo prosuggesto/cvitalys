@@ -1,4 +1,4 @@
-// Analytics page
+// Analytics page — données calculées depuis les CVs Supabase
 
 const StatTile = ({ label, value, trend }) =>
 <div className="stat">
@@ -7,9 +7,8 @@ const StatTile = ({ label, value, trend }) =>
     {trend && <div className="stat__trend">↑ {trend}</div>}
   </div>;
 
-
 const MiniBar = ({ label, value, max, icon, brand }) => {
-  const pct = value / max * 100;
+  const pct = max > 0 ? (value / max * 100) : 0;
   const Ico = icon ? I[icon] : null;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 40px", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid var(--border-soft)" }}>
@@ -51,24 +50,61 @@ const SparkLine = () => {
 
 const Analytics = ({ cvs }) => {
   const { t, lang } = useT();
-  const s = MOCK.mockStats;
+
+  // Calculer les agrégats depuis les données réelles des CVs
+  const totalScans = cvs.reduce((acc, cv) => acc + (cv.stats ? cv.stats.scans : 0), 0);
+  const totalAudioDem = cvs.reduce((acc, cv) => acc + (cv.stats ? cv.stats.audioDemarrages : 0), 0);
+  const totalAudioComp = cvs.reduce((acc, cv) => acc + (cv.stats ? cv.stats.audioCompletes : 0), 0);
+  const avgTime = cvs.length > 0
+    ? Math.round(cvs.reduce((acc, cv) => acc + (cv.stats ? cv.stats.avgTime : 0), 0) / cvs.length)
+    : 0;
+  const avgTimeFmt = avgTime > 0
+    ? `${Math.floor(avgTime / 60)}:${String(avgTime % 60).padStart(2, '0')}`
+    : '—';
+  const audioRate = totalAudioDem > 0
+    ? ((totalAudioComp / totalAudioDem) * 100).toFixed(1) + '%'
+    : '—';
+
+  // Top CV
+  const topCv = cvs.length > 0
+    ? cvs.reduce((best, cv) => ((cv.stats ? cv.stats.scans : 0) > (best.stats ? best.stats.scans : 0) ? cv : best), cvs[0])
+    : null;
+  const topCvScans = topCv && topCv.stats ? topCv.stats.scans : 0;
+  const topCvShare = totalScans > 0 && topCv
+    ? Math.round((topCvScans / totalScans) * 100) + '%'
+    : '0%';
+
+  // Stats agrégées par secteur pour top secteur
+  const sectorMap = {};
+  cvs.forEach((cv) => {
+    const sector = cv.sector || '—';
+    if (!sectorMap[sector]) sectorMap[sector] = 0;
+    sectorMap[sector] += cv.stats ? cv.stats.scans : 0;
+  });
+  const topSectorEntry = Object.entries(sectorMap).sort((a, b) => b[1] - a[1])[0];
+  const topSector = topSectorEntry ? { name: topSectorEntry[0], scans: topSectorEntry[1] } : { name: '—', scans: 0 };
+  const topSectorShare = totalScans > 0 ? Math.round((topSector.scans / totalScans) * 100) + '%' : '0%';
+
   const totals = [
-    { label: t("analytics.totalScans"),    value: "127",  trend: "+18 " + t("analytics.thisMonth") },
-    { label: t("analytics.avgTime"),       value: "1:42", trend: "+8s" },
-    { label: t("analytics.feedbackRate"),  value: "7,1%", trend: lang === "es" ? "5 comentarios" : "5 retours" },
+    { label: t("analytics.totalScans"), value: String(totalScans), trend: null },
+    { label: t("analytics.avgTime"), value: avgTimeFmt, trend: null },
+    { label: t("analytics.feedbackRate"), value: audioRate, trend: null },
   ];
+
   const engagement = [
-    { label: t("analytics.engagement.launched"), value: 42 },
-    { label: t("analytics.engagement.complete"), value: 31 },
-    { label: t("analytics.engagement.rate"),     value: "73,8%" },
+    { label: t("analytics.engagement.launched"), value: totalAudioDem },
+    { label: t("analytics.engagement.complete"), value: totalAudioComp },
+    { label: t("analytics.engagement.rate"), value: audioRate },
   ];
+
   const clicks = [
-    { label: "WhatsApp",  value: 11, brand: "whatsapp" },
-    { label: "Gmail",     value: 8,  brand: "gmail" },
-    { label: "LinkedIn",  value: 7,  brand: "linkedin" },
-    { label: "Instagram", value: 3,  brand: "instagram" },
-    { label: lang === "es" ? "Sitio web" : "Site web", value: 2, icon: "Globe" },
+    { label: "WhatsApp", value: cvs.reduce((a, c) => a + (c.stat_clics_whatsapp || 0), 0), brand: "whatsapp" },
+    { label: "Gmail", value: cvs.reduce((a, c) => a + (c.stat_clics_email || 0), 0), brand: "gmail" },
+    { label: "LinkedIn", value: cvs.reduce((a, c) => a + (c.stat_clics_linkedin || 0), 0), brand: "linkedin" },
+    { label: "Instagram", value: cvs.reduce((a, c) => a + (c.stat_clics_instagram || 0), 0), brand: "instagram" },
+    { label: lang === "es" ? "Sitio web" : "Site web", value: cvs.reduce((a, c) => a + (c.stat_clics_site_web || 0), 0), icon: "Globe" },
   ];
+  const maxClicks = Math.max(...clicks.map((c) => c.value), 1);
 
   return (
     <div className="page" style={{ maxWidth: 1320 }}>
@@ -85,8 +121,9 @@ const Analytics = ({ cvs }) => {
         </select>
         <select className="select" style={{ flex: "1 1 160px", maxWidth: 220 }} defaultValue="">
           <option value="">{t("analytics.allSectors")}</option>
-          <option value="hotel">Hôtellerie / Tourisme</option>
-          <option value="commerce">Vente / Relation client</option>
+          {[...new Set(cvs.map((c) => c.sector).filter(Boolean))].map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
         </select>
         <select className="select" style={{ flex: "1 1 160px", maxWidth: 220 }} defaultValue="">
           <option value="">{t("analytics.allCvs")}</option>
@@ -95,17 +132,17 @@ const Analytics = ({ cvs }) => {
         <button className="btn btn--primary" style={{ marginLeft: "auto" }}>{t("analytics.filter")}</button>
       </div>
 
-      {/* KPI tiles - now 3 cards */}
+      {/* KPI tiles */}
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", marginBottom: 28 }}>
         {totals.map((tt) => <StatTile key={tt.label} {...tt} />)}
       </div>
 
-      {/* Scans over time - cleaner, more breathing room */}
+      {/* Scans over time — sparkline illustrative */}
       <div className="card" style={{ padding: 32, marginBottom: 28 }}>
         <div className="between" style={{ marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
           <div>
             <div className="eyebrow">{t("analytics.scansEyebrow")}</div>
-            <h3 className="display" style={{ margin: "10px 0 4px", fontSize: 36, fontWeight: 500, lineHeight: 1.05 }}>+18</h3>
+            <h3 className="display" style={{ margin: "10px 0 4px", fontSize: 36, fontWeight: 500, lineHeight: 1.05 }}>{totalScans}</h3>
             <div className="muted" style={{ fontSize: 13 }}>{t("analytics.scansLabel")}</div>
           </div>
           <div className="tabs">
@@ -127,7 +164,7 @@ const Analytics = ({ cvs }) => {
         <div className="card" style={{ padding: 28 }}>
           <h3 className="display" style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 500 }}>{t("analytics.clicksTitle")}</h3>
           <p className="muted" style={{ margin: "0 0 12px", fontSize: 13 }}>{t("analytics.clicksSub")}</p>
-          {clicks.map((c) => <MiniBar key={c.label} {...c} max={Math.max(...clicks.map((x) => x.value))} />)}
+          {clicks.map((c) => <MiniBar key={c.label} {...c} max={maxClicks} />)}
         </div>
 
         <div className="card" style={{ padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
@@ -138,24 +175,26 @@ const Analytics = ({ cvs }) => {
               <I.Crown size={16} stroke="var(--gold-deep)" />
               <div className="eyebrow" style={{ color: "var(--gold-deep)" }}>{t("analytics.topCv")}</div>
             </div>
-            <div className="display" style={{ fontSize: 26, fontWeight: 500, fontStyle: "italic", lineHeight: 1.1 }}>{s.topCv.name}</div>
-            <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{s.topCv.scans} scans · {s.topCv.share} {t("analytics.topShare")}</div>
+            <div className="display" style={{ fontSize: 26, fontWeight: 500, fontStyle: "italic", lineHeight: 1.1 }}>
+              {topCv ? topCv.name : '—'}
+            </div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{topCvScans} scans · {topCvShare} {t("analytics.topShare")}</div>
           </div>
 
           <div style={{ padding: 18, background: "var(--surface-2)", borderRadius: 14, border: "1px solid var(--border-soft)" }}>
             <div className="eyebrow" style={{ marginBottom: 6 }}>{t("analytics.topSector")}</div>
-            <div className="display" style={{ fontSize: 22, fontWeight: 500, lineHeight: 1.15 }}>{s.topSector.name}</div>
-            <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>{s.topSector.scans} scans · {s.topSector.share} {t("analytics.topShare")}</div>
+            <div className="display" style={{ fontSize: 22, fontWeight: 500, lineHeight: 1.15 }}>{topSector.name}</div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>{topSector.scans} scans · {topSectorShare} {t("analytics.topShare")}</div>
           </div>
 
           <div style={{ padding: 18, background: "#1B1814", color: "#F7F3EC", borderRadius: 14 }}>
             <div className="eyebrow" style={{ color: "rgba(247,243,236,0.5)", marginBottom: 6 }}>{t("analytics.audioEngagement")}</div>
             <div className="row gap-24" style={{ alignItems: "flex-end", marginTop: 4 }}>
               <div>
-                <div className="display" style={{ fontSize: 36, fontWeight: 500, color: "#F7F3EC" }}>73,8%</div>
+                <div className="display" style={{ fontSize: 36, fontWeight: 500, color: "#F7F3EC" }}>{audioRate}</div>
                 <div style={{ fontSize: 12, color: "rgba(247,243,236,0.6)" }}>{t("analytics.fullListens")}</div>
               </div>
-              <div style={{ fontSize: 12, color: "var(--gold-soft)" }}>{t("analytics.listensOf", { a: 31, b: 42 })}</div>
+              <div style={{ fontSize: 12, color: "var(--gold-soft)" }}>{t("analytics.listensOf", { a: totalAudioComp, b: totalAudioDem })}</div>
             </div>
           </div>
         </div>
@@ -165,40 +204,19 @@ const Analytics = ({ cvs }) => {
         {engagement.map((e) => <StatTile key={e.label} label={e.label} value={e.value} />)}
       </div>
 
-      {/* Latest interactions — now with Recruteur column */}
+      {/* Interactions — fonctionnalité future */}
       <div className="card" style={{ padding: 28 }}>
         <div className="between" style={{ marginBottom: 16 }}>
           <h3 className="display" style={{ margin: 0, fontSize: 22, fontWeight: 500 }}>{t("analytics.interactions")}</h3>
-          <a style={{ fontSize: 13, color: "var(--muted)", cursor: "pointer" }}>{t("analytics.viewAll")}</a>
         </div>
-        <div>
-          <div style={{ display: "grid", gridTemplateColumns: "70px 1.2fr 1.4fr 1.3fr 1.3fr 1.8fr", gap: 14, padding: "0 8px 12px", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>
-            <span>{t("analytics.col.date")}</span>
-            <span>{t("analytics.col.cv")}</span>
-            <span>{t("analytics.col.action")}</span>
-            <span>{t("analytics.col.company")}</span>
-            <span>{t("analytics.col.recruiter")}</span>
-            <span>{t("analytics.col.comment")}</span>
-          </div>
-          {s.interactions.map((it, i) =>
-            <div key={i} style={{ display: "grid", gridTemplateColumns: "70px 1.2fr 1.4fr 1.3fr 1.3fr 1.8fr", gap: 14, padding: "16px 8px", borderBottom: "1px solid var(--border-soft)", alignItems: "center", fontSize: 14 }}>
-              <span className="muted" style={{ fontSize: 13 }}>{it.date}</span>
-              <span>{it.cv}</span>
-              <span className="row gap-8">
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: it.action.includes("Retour") ? "var(--green)" : it.action.includes("échanger") ? "var(--gold-deep)" : "var(--subtle)" }} />
-                {it.action}
-              </span>
-              <span className="muted">{it.company}</span>
-              <span>{it.recruiter || "—"}</span>
-              <span className="muted" style={{ fontSize: 13, lineHeight: 1.4 }}>{it.note}</span>
-            </div>
-          )}
+        <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
+          <I.Calendar size={32} stroke="var(--subtle)"/>
+          <p style={{ margin: "12px 0 0" }}>Fonctionnalité disponible prochainement</p>
         </div>
       </div>
 
-      <style>{`@media (max-width: 900px) { .page > .card[style*="grid-template-columns"], .page > .grid[style*="grid-template-columns: 1.2fr"] { grid-template-columns: 1fr !important; } .page .card > div[style*="grid-template-columns: 70px"] { grid-template-columns: 1fr !important; gap: 4px !important; padding: 12px 8px !important; } }`}</style>
+      <style>{`@media (max-width: 900px) { .page > .card[style*="grid-template-columns"], .page > .grid[style*="grid-template-columns: 1.2fr"] { grid-template-columns: 1fr !important; } }`}</style>
     </div>);
-
 };
 
 window.Analytics = Analytics;

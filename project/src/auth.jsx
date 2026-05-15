@@ -1,4 +1,4 @@
-// Auth: login / signup / forgot
+// Auth: login / signup / forgot — connecté au vrai backend Supabase
 
 const AuthShell = ({ children, footer }) => {
   const { t } = useT();
@@ -29,10 +29,41 @@ const AuthShell = ({ children, footer }) => {
   );
 };
 
+const AuthError = ({ message }) => {
+  if (!message) return null;
+  return (
+    <div style={{ padding: "10px 14px", background: "var(--red-soft, #fef2f2)", border: "1px solid var(--red, #ef4444)", borderRadius: 10, color: "var(--red, #dc2626)", fontSize: 13, marginBottom: 4 }}>
+      {message}
+    </div>
+  );
+};
+
 const Login = ({ navigate }) => {
   const { t } = useT();
-  const [email, setEmail] = useState("lamperim.diego47@gmail.com");
-  const [password, setPassword] = useState("••••••••");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    api.signIn(email, password)
+      .then(({ error: err }) => {
+        setLoading(false);
+        if (err) {
+          if (err.message && err.message.toLowerCase().includes("invalid")) {
+            setError("Email ou mot de passe incorrect. Vérifiez vos identifiants.");
+          } else {
+            setError(err.message || "Une erreur est survenue. Réessayez.");
+          }
+        } else {
+          navigate("/app/cvs");
+        }
+      });
+  };
+
   return (
     <AuthShell footer={
       <div style={{ marginTop: 24, fontSize: 14, color: "var(--muted)" }}>
@@ -42,13 +73,16 @@ const Login = ({ navigate }) => {
       <div className="eyebrow">{t("auth.eyebrowLogin")}</div>
       <h1 className="display" style={{ fontSize: 44, margin: "12px 0 8px", fontWeight: 500 }}>{t("auth.titleLogin1")} <em className="display-italic">{t("auth.titleLogin2")}</em></h1>
       <p className="muted" style={{ marginBottom: 32 }}>{t("auth.subLogin")}</p>
-      <form onSubmit={(e) => { e.preventDefault(); navigate("/app/cvs"); }} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        <Field label={t("common.email")}><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} type="email"/></Field>
-        <Field label={t("auth.password")}><input className="input" value={password} onChange={(e) => setPassword(e.target.value)} type="password"/></Field>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <Field label={t("common.email")}><input className="input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="votre@email.fr" required/></Field>
+        <Field label={t("auth.password")}><input className="input" value={password} onChange={(e) => setPassword(e.target.value)} type="password" required/></Field>
         <div style={{ textAlign: "right" }}>
           <a onClick={() => navigate("/auth/forgot")} style={{ fontSize: 13, color: "var(--muted)", cursor: "pointer" }}>{t("auth.forgotPw")}</a>
         </div>
-        <button className="btn btn--primary btn--lg" type="submit">{t("auth.submitLogin")}</button>
+        <AuthError message={error}/>
+        <button className="btn btn--primary btn--lg" type="submit" disabled={loading}>
+          {loading ? "Connexion…" : t("auth.submitLogin")}
+        </button>
       </form>
     </AuthShell>
   );
@@ -57,6 +91,37 @@ const Login = ({ navigate }) => {
 const Signup = ({ navigate }) => {
   const { t } = useT();
   const [f, setF] = useState({ firstName: "", lastName: "", email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError("");
+    if (!f.firstName || !f.lastName) {
+      setError("Prénom et nom sont requis.");
+      return;
+    }
+    if (f.password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+    setLoading(true);
+    api.signUp(f.email, f.password, f.firstName, f.lastName)
+      .then(({ data, error: err }) => {
+        setLoading(false);
+        if (err) {
+          if (err.message && err.message.toLowerCase().includes("already")) {
+            setError("Un compte existe déjà avec cet email. Connectez-vous.");
+          } else {
+            setError(err.message || "Une erreur est survenue. Réessayez.");
+          }
+        } else {
+          // Supabase peut requérir confirmation email — on redirige quand même
+          navigate("/app/cvs");
+        }
+      });
+  };
+
   return (
     <AuthShell footer={
       <div style={{ marginTop: 24, fontSize: 14, color: "var(--muted)" }}>
@@ -66,14 +131,17 @@ const Signup = ({ navigate }) => {
       <div className="eyebrow">{t("auth.eyebrowSignup")}</div>
       <h1 className="display" style={{ fontSize: 44, margin: "12px 0 8px", fontWeight: 500 }}>{t("auth.titleSignup1")} <em className="display-italic">{t("auth.titleSignup2")}</em></h1>
       <p className="muted" style={{ marginBottom: 32 }}>{t("auth.subSignup")}</p>
-      <form onSubmit={(e) => { e.preventDefault(); navigate("/app/cvs"); }} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <Field label={t("common.firstName")}><input className="input" value={f.firstName} onChange={(e) => setF({ ...f, firstName: e.target.value })} placeholder="Diego"/></Field>
-          <Field label={t("common.lastName")}><input className="input" value={f.lastName} onChange={(e) => setF({ ...f, lastName: e.target.value })} placeholder="Lamperim"/></Field>
+          <Field label={t("common.firstName")}><input className="input" value={f.firstName} onChange={(e) => setF({ ...f, firstName: e.target.value })} placeholder="Diego" required/></Field>
+          <Field label={t("common.lastName")}><input className="input" value={f.lastName} onChange={(e) => setF({ ...f, lastName: e.target.value })} placeholder="Lamperim" required/></Field>
         </div>
-        <Field label={t("common.email")}><input className="input" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="votre@email.fr"/></Field>
-        <Field label={t("auth.password")} hint={t("auth.pwHint")}><input className="input" type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })}/></Field>
-        <button className="btn btn--primary btn--lg" type="submit">{t("auth.submitSignup")}</button>
+        <Field label={t("common.email")}><input className="input" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="votre@email.fr" required/></Field>
+        <Field label={t("auth.password")} hint={t("auth.pwHint")}><input className="input" type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} required/></Field>
+        <AuthError message={error}/>
+        <button className="btn btn--primary btn--lg" type="submit" disabled={loading}>
+          {loading ? "Création du compte…" : t("auth.submitSignup")}
+        </button>
         <div style={{ fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
           {t("auth.terms")}
         </div>
@@ -86,6 +154,24 @@ const Forgot = ({ navigate }) => {
   const { t } = useT();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    api.resetPassword(email)
+      .then(({ error: err }) => {
+        setLoading(false);
+        if (err) {
+          setError(err.message || "Une erreur est survenue. Réessayez.");
+        } else {
+          setSent(true);
+        }
+      });
+  };
+
   return (
     <AuthShell footer={
       <div style={{ marginTop: 24, fontSize: 14, color: "var(--muted)" }}>
@@ -101,9 +187,12 @@ const Forgot = ({ navigate }) => {
           <p className="muted" style={{ margin: "10px 0 0", fontSize: 14 }}>{t("auth.sentSub")}</p>
         </div>
       ) : (
-        <form onSubmit={(e) => { e.preventDefault(); setSent(true); }} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <Field label={t("common.email")}><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.fr"/></Field>
-          <button className="btn btn--primary btn--lg" type="submit">{t("auth.submitForgot")}</button>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <Field label={t("common.email")}><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.fr" required/></Field>
+          <AuthError message={error}/>
+          <button className="btn btn--primary btn--lg" type="submit" disabled={loading}>
+            {loading ? "Envoi…" : t("auth.submitForgot")}
+          </button>
         </form>
       )}
     </AuthShell>

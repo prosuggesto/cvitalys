@@ -1,4 +1,4 @@
-// Mes CV page + Présenter modal + Ajouter modal
+// Mes CV page + Présenter modal + Ajouter modal — connecté à Supabase
 
 const CVCard = ({ cv, onPresent, onCustomize, onPreview, onDelete }) => {
   const { t } = useT();
@@ -46,7 +46,17 @@ const EmptyCVCard = ({ onClick }) => {
 const PresentModal = ({ cv, open, onClose, onCopy }) => {
   const { t } = useT();
   if (!cv) return null;
-  const link = `cvitalis.app/${cv.id}-${MOCK.initialUser.lastName.toLowerCase()}`;
+  const publicUrl = cv.short_code
+    ? `${window.location.origin}${window.location.pathname}#/cv/${cv.short_code}`
+    : null;
+
+  const handleCopy = () => {
+    if (publicUrl) {
+      navigator.clipboard && navigator.clipboard.writeText(publicUrl).catch(() => {});
+    }
+    onCopy && onCopy();
+  };
+
   return (
     <Modal open={open} onClose={onClose} width={920}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
@@ -60,10 +70,12 @@ const PresentModal = ({ cv, open, onClose, onCopy }) => {
             {t("cvs.modal.present.body")}
           </p>
           <div style={{ padding: 18, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18, display: "flex", justifyContent: "center" }}>
-            <QRBlock size={180}/>
+            <QRBlock size={180} url={publicUrl}/>
           </div>
-          <div style={{ marginTop: 14, fontSize: 12, color: "var(--muted)", textAlign: "center", fontFamily: "var(--font-mono)" }}>{link}</div>
-          <button className="btn btn--primary btn--block btn--lg" style={{ marginTop: 20 }} onClick={onCopy}>
+          {publicUrl && (
+            <div style={{ marginTop: 14, fontSize: 12, color: "var(--muted)", textAlign: "center", fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>{publicUrl}</div>
+          )}
+          <button className="btn btn--primary btn--block btn--lg" style={{ marginTop: 20 }} onClick={handleCopy}>
             <I.Share size={16}/> {t("common.share")}
           </button>
         </div>
@@ -73,18 +85,67 @@ const PresentModal = ({ cv, open, onClose, onCopy }) => {
   );
 };
 
-const AddCVModal = ({ open, onClose, onCreate }) => {
+const AddCVModal = ({ open, onClose, onCreate, session }) => {
   const { t } = useT();
-  const [f, setF] = useState({ name: "", role: "", sector: "", file: null, audio: null });
-  useEffect(() => { if (open) setF({ name: "", role: "", sector: "", file: null, audio: null }); }, [open]);
+  const [f, setF] = useState({ name: "", role: "", sector: "", file: null, audioBlob: null });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (open) setF({ name: "", role: "", sector: "", file: null, audioBlob: null });
+    setError("");
+  }, [open]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!f.name.trim()) { setError("Le nom du CV est requis."); return; }
+    if (!session) { setError("Vous devez être connecté."); return; }
+    setSaving(true);
+    setError("");
+
+    const userId = session.user.id;
+
+    // Créer poste et secteur en parallèle si nécessaire
+    Promise.all([
+      f.role ? api.getOrCreatePoste(userId, f.role) : Promise.resolve(null),
+      f.sector ? api.getOrCreateSecteur(userId, f.sector) : Promise.resolve(null),
+    ])
+      .then(([posteId, secteurId]) => {
+        return api.createCv(userId, {
+          nom_cv: f.name,
+          poste_id: posteId,
+          secteur_id: secteurId,
+          email_contact: MOCK.initialUser.email || null,
+          telephone_contact: MOCK.initialUser.phone || null,
+          afficher_bouton_echange: true,
+          afficher_bouton_retour: true,
+          afficher_bouton_email: true,
+        });
+      })
+      .then((newCv) => {
+        const uploads = [];
+        if (f.file) uploads.push(api.uploadCvFile(userId, newCv.dbId, f.file).then((url) => { newCv.cv_url = url; newCv.hasFile = true; }));
+        if (f.audioBlob) uploads.push(api.uploadAudio(userId, newCv.dbId, f.audioBlob).then((url) => { newCv.audio_url = url; newCv.audio = { url }; }));
+        return Promise.all(uploads).then(() => newCv);
+      })
+      .then((newCv) => {
+        setSaving(false);
+        onCreate(newCv);
+      })
+      .catch((err) => {
+        setSaving(false);
+        setError(err.message || "Une erreur est survenue lors de la création du CV.");
+      });
+  };
+
   return (
     <Modal open={open} onClose={onClose} width={560}>
       <div style={{ padding: 40 }}>
         <div className="eyebrow">{t("cvs.modal.add.eyebrow")}</div>
         <h2 className="display" style={{ fontSize: 32, margin: "8px 0 6px", fontWeight: 500 }}>{t("cvs.modal.add.title")}</h2>
         <p className="muted" style={{ marginBottom: 24, fontSize: 14 }}>{t("cvs.modal.add.sub")}</p>
-        <form onSubmit={(e) => { e.preventDefault(); onCreate(f); }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Field label={t("common.cvName")}><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="ex. CV Hôtellerie"/></Field>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Field label={t("common.cvName")}><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="ex. CV Hôtellerie" required/></Field>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <Field label={t("common.role")}><input className="input" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} placeholder="Réceptionniste"/></Field>
             <Field label={t("common.sector")}><input className="input" value={f.sector} onChange={(e) => setF({ ...f, sector: e.target.value })} placeholder="Hôtellerie"/></Field>
@@ -93,19 +154,23 @@ const AddCVModal = ({ open, onClose, onCreate }) => {
             <label className="card-empty" style={{ padding: 18, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", justifyContent: "center" }}>
               <I.Upload size={18} stroke="var(--muted)"/>
               <span style={{ color: "var(--muted)", fontSize: 14 }}>{f.file?.name || t("cvs.modal.add.cvHint")}</span>
-              <input type="file" accept="application/pdf" hidden onChange={(e) => setF({ ...f, file: e.target.files[0] })}/>
+              <input type="file" accept="application/pdf" hidden onChange={(e) => setF({ ...f, file: e.target.files[0] || null })}/>
             </label>
           </Field>
           <Field label={t("cvs.modal.add.audio")}>
-            <label className="card-empty" style={{ padding: 18, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", justifyContent: "center" }}>
-              <I.Mic size={18} stroke="var(--muted)"/>
-              <span style={{ color: "var(--muted)", fontSize: 14 }}>{f.audio?.name || t("cvs.modal.add.audioHint")}</span>
-              <input type="file" accept="audio/*" hidden onChange={(e) => setF({ ...f, audio: e.target.files[0] })}/>
-            </label>
+            <AudioRecorder
+              onBlob={(blob) => setF((prev) => ({ ...prev, audioBlob: blob }))}
+              onRemove={() => setF((prev) => ({ ...prev, audioBlob: null }))}
+            />
           </Field>
+          {error && (
+            <div style={{ color: "var(--red, #dc2626)", fontSize: 13, padding: "8px 12px", background: "var(--red-soft, #fef2f2)", borderRadius: 8 }}>{error}</div>
+          )}
           <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
-            <button type="button" className="btn btn--secondary" onClick={onClose} style={{ flex: 1 }}>{t("common.cancel")}</button>
-            <button type="submit" className="btn btn--primary" style={{ flex: 2 }}>{t("cvs.modal.add.submit")}</button>
+            <button type="button" className="btn btn--secondary" onClick={onClose} style={{ flex: 1 }} disabled={saving}>{t("common.cancel")}</button>
+            <button type="submit" className="btn btn--primary" style={{ flex: 2 }} disabled={saving}>
+              {saving ? "Création…" : t("cvs.modal.add.submit")}
+            </button>
           </div>
         </form>
       </div>
@@ -113,10 +178,27 @@ const AddCVModal = ({ open, onClose, onCreate }) => {
   );
 };
 
-const MesCV = ({ cvs, setCvs, navigate, toast }) => {
+const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
   const { t } = useT();
   const [presentCv, setPresentCv] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+
+  const handleDelete = (cv) => {
+    if (!confirm(t("cvs.deleteConfirm", { name: cv.name }))) return;
+    setDeleting(cv.id);
+    api.deleteCv(cv.dbId)
+      .then(() => {
+        setCvs(cvs.filter((c) => c.id !== cv.id));
+        toast(t("cvs.deleted"));
+        setDeleting(null);
+      })
+      .catch((err) => {
+        setDeleting(null);
+        toast("Erreur : " + (err.message || "suppression échouée"));
+      });
+  };
+
   return (
     <div className="page">
       <PageHeader
@@ -131,34 +213,28 @@ const MesCV = ({ cvs, setCvs, navigate, toast }) => {
             cv={cv}
             onPresent={() => setPresentCv(cv)}
             onCustomize={() => navigate(`/app/customize/${cv.id}`)}
-            onPreview={() => navigate(`/cv/${cv.id}`)}
-            onDelete={() => {
-              if (confirm(t("cvs.deleteConfirm", { name: cv.name }))) {
-                setCvs(cvs.filter((c) => c.id !== cv.id));
-                toast(t("cvs.deleted"));
-              }
-            }}
+            onPreview={() => navigate(`/cv/${cv.short_code || cv.id}`)}
+            onDelete={() => handleDelete(cv)}
           />
         ))}
         <EmptyCVCard onClick={() => setAddOpen(true)}/>
       </div>
-      <PresentModal cv={presentCv} open={!!presentCv} onClose={() => setPresentCv(null)} onCopy={() => { toast(t("common.copied")); }}/>
-      <AddCVModal open={addOpen} onClose={() => setAddOpen(false)} onCreate={(f) => {
-        const id = "cv" + Date.now();
-        setCvs([...cvs, {
-          id,
-          name: f.name || "Nouveau CV",
-          role: f.role || "—",
-          sector: f.sector || "—",
-          audio: f.audio ? { name: f.audio.name, duration: "1:00" } : null,
-          hasFile: !!f.file,
-          buttons: { exchange: true, feedback: true, email: true, whatsapp: false, linkedin: false, instagram: false, website: false },
-          contact: { email: MOCK.initialUser.email, phone: MOCK.initialUser.phone, whatsapp: "", linkedin: "", instagram: "", website: "" },
-          accent: "warm",
-        }]);
-        setAddOpen(false);
-        toast(t("cvs.created"));
-      }}/>
+      <PresentModal
+        cv={presentCv}
+        open={!!presentCv}
+        onClose={() => setPresentCv(null)}
+        onCopy={() => { toast(t("common.copied")); }}
+      />
+      <AddCVModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        session={session}
+        onCreate={(newCv) => {
+          setCvs([...cvs, newCv]);
+          setAddOpen(false);
+          toast(t("cvs.created"));
+        }}
+      />
     </div>
   );
 };

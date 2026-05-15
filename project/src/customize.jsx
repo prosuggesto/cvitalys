@@ -1,4 +1,4 @@
-// Personnalisation: select CV + edit CV
+// Personnalisation: select CV + edit CV — connecté à Supabase
 
 const CustomizeSelectCard = ({ cv, onClick }) => {
   const { t } = useT();
@@ -23,7 +23,6 @@ const CustomizeSelectCard = ({ cv, onClick }) => {
       </span>
     </div>
   </div>);
-
 };
 
 const CustomizeSelect = ({ cvs, navigate }) => {
@@ -34,14 +33,12 @@ const CustomizeSelect = ({ cvs, navigate }) => {
         eyebrow={t("custom.select.eyebrow")}
         title={t("custom.select.title")}
         subtitle={t("custom.select.sub")} />
-      
     <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 20 }}>
       {cvs.map((cv) =>
         <CustomizeSelectCard key={cv.id} cv={cv} onClick={() => navigate(`/app/customize/${cv.id}`)} />
-        )}
+      )}
     </div>
   </div>);
-
 };
 
 const ButtonToggleRow = ({ label, icon, brand, on, onChange, children }) => {
@@ -59,21 +56,86 @@ const ButtonToggleRow = ({ label, icon, brand, on, onChange, children }) => {
       </div>
       {on && children && <div style={{ marginTop: 10 }}>{children}</div>}
     </div>);
-
 };
 
-const CustomizeEdit = ({ cv, onSave, onPreview, onUpdate, toast, navigate }) => {
+const CustomizeEdit = ({ cv, session, onSave, onPreview, toast, navigate }) => {
   const { t } = useT();
   const [local, setLocal] = useState(cv);
+  const [saving, setSaving] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [pendingFile, setPendingFile] = useState(null);
   const fileInputRef = useRef();
-  const audioInputRef = useRef();
 
-  useEffect(() => {setLocal(cv);}, [cv?.id]);
+  useEffect(() => { setLocal(cv); setAudioBlob(null); setPendingFile(null); }, [cv?.id]);
   if (!cv) return null;
 
   const update = (patch) => setLocal((l) => ({ ...l, ...patch }));
   const updateContact = (patch) => setLocal((l) => ({ ...l, contact: { ...l.contact, ...patch } }));
   const updateButtons = (patch) => setLocal((l) => ({ ...l, buttons: { ...l.buttons, ...patch } }));
+
+  const handleSave = () => {
+    if (!session) { toast("Vous devez être connecté."); return; }
+    setSaving(true);
+
+    const userId = session.user.id;
+    const cvId = local.dbId;
+
+    // Préparer les updates DB
+    const dbUpdates = {
+      nom_cv: local.name,
+      email_contact: local.contact.email || null,
+      telephone_contact: local.contact.phone || null,
+      numero_whatsapp: local.contact.whatsapp || null,
+      linkedin_url: local.contact.linkedin || null,
+      instagram_url: local.contact.instagram || null,
+      site_web_url: local.contact.website || null,
+      afficher_bouton_echange: local.buttons.exchange,
+      afficher_bouton_retour: local.buttons.feedback,
+      afficher_bouton_email: local.buttons.email,
+      afficher_bouton_whatsapp: local.buttons.whatsapp,
+      afficher_bouton_linkedin: local.buttons.linkedin,
+      afficher_bouton_instagram: local.buttons.instagram,
+      afficher_bouton_site_web: local.buttons.website,
+    };
+
+    // Créer poste/secteur si changé (champs texte libres)
+    const postes = local.role
+      ? api.getOrCreatePoste(userId, local.role).then((id) => { dbUpdates.poste_id = id; })
+      : Promise.resolve();
+    const secteurs = local.sector
+      ? api.getOrCreateSecteur(userId, local.sector).then((id) => { dbUpdates.secteur_id = id; })
+      : Promise.resolve();
+
+    Promise.all([postes, secteurs])
+      .then(() => api.updateCv(cvId, dbUpdates))
+      .then(() => {
+        const uploads = [];
+        if (pendingFile) {
+          uploads.push(
+            api.uploadCvFile(userId, cvId, pendingFile).then((url) => {
+              update({ cv_url: url, hasFile: true });
+            })
+          );
+        }
+        if (audioBlob) {
+          uploads.push(
+            api.uploadAudio(userId, cvId, audioBlob).then((url) => {
+              update({ audio_url: url, audio: { url } });
+            })
+          );
+        }
+        return Promise.all(uploads);
+      })
+      .then(() => {
+        setSaving(false);
+        onSave(local);
+        toast(t("custom.saved"));
+      })
+      .catch((err) => {
+        setSaving(false);
+        toast("Erreur : " + (err.message || "sauvegarde échouée"));
+      });
+  };
 
   return (
     <div className="page" style={{ maxWidth: 1320 }}>
@@ -85,71 +147,75 @@ const CustomizeEdit = ({ cv, onSave, onPreview, onUpdate, toast, navigate }) => 
         <div className="row gap-8">
             <button className="btn btn--secondary" onClick={() => navigate("/app/customize")}>← {t("common.back")}</button>
             <button className="btn btn--secondary" onClick={() => onPreview(local)}><I.Eye size={14} /> {t("common.preview")}</button>
-            <button className="btn btn--primary" onClick={() => {onSave(local);toast(t("custom.saved"));}}><I.Check size={14} /> {t("common.save")}</button>
+            <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
+              <I.Check size={14} /> {saving ? "Sauvegarde…" : t("common.save")}
+            </button>
           </div>
         } />
-      
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.05fr) minmax(0, 1fr)", gap: 28, alignItems: "flex-start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 20, position: "sticky", top: 92 }}>
+          {/* CV File section */}
           <div className="card" style={{ padding: 32 }}>
             <div className="between" style={{ marginBottom: 18 }}>
               <h3 className="display" style={{ margin: 0, fontSize: 22, fontWeight: 500 }}>{t("custom.cvSection")}</h3>
               <span className="badge badge--neutral">{local.hasFile ? t("custom.cvImported") : t("custom.cvNone")}</span>
             </div>
-            {local.hasFile ?
-            <React.Fragment>
+            {local.hasFile ? (
+              <React.Fragment>
                 <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 20px" }}>
                   <CVPreviewVisual cv={local} scale={1.4} float3d={true} />
                 </div>
                 <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 18 }}>
                   <button className="btn btn--secondary btn--sm" onClick={() => fileInputRef.current.click()}><I.Upload size={14} /> {t("common.replace")}</button>
                   <button className="btn btn--ghost btn--sm" onClick={() => onPreview(local)}><I.Eye size={14} /> {t("common.fullscreen")}</button>
-                  <input type="file" accept="application/pdf" ref={fileInputRef} hidden onChange={(e) => {if (e.target.files[0]) toast(t("custom.cvImported"));}} />
+                  <input type="file" accept="application/pdf" ref={fileInputRef} hidden onChange={(e) => {
+                    if (e.target.files[0]) {
+                      setPendingFile(e.target.files[0]);
+                      update({ hasFile: true });
+                      toast(t("custom.cvImported"));
+                    }
+                  }} />
                 </div>
-              </React.Fragment> :
-
-            <div className="card-empty" style={{ padding: 56, textAlign: "center", aspectRatio: "1/1.414", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
+              </React.Fragment>
+            ) : (
+              <div className="card-empty" style={{ padding: 56, textAlign: "center", aspectRatio: "1/1.414", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
                 <I.Cv size={36} stroke="var(--subtle)" />
                 <div className="muted">{t("custom.cvNoneText")}</div>
-                <button className="btn btn--primary btn--sm" onClick={() => {update({ hasFile: true });toast(t("custom.cvImported"));}}><I.Upload size={14} /> {t("custom.cvImportBtn")}</button>
+                <button className="btn btn--primary btn--sm" onClick={() => fileInputRef.current.click()}><I.Upload size={14} /> {t("custom.cvImportBtn")}</button>
+                <input type="file" accept="application/pdf" ref={fileInputRef} hidden onChange={(e) => {
+                  if (e.target.files[0]) {
+                    setPendingFile(e.target.files[0]);
+                    update({ hasFile: true });
+                    toast(t("custom.cvImported"));
+                  }
+                }} />
               </div>
-            }
+            )}
           </div>
 
+          {/* Audio section — AudioRecorder */}
           <div className="card" style={{ padding: 24 }}>
             <div className="between" style={{ marginBottom: 14 }}>
               <h3 className="display" style={{ margin: 0, fontSize: 22, fontWeight: 500 }}>{t("custom.audioSection")}</h3>
               <I.Mic size={18} stroke="var(--muted)" />
             </div>
-            {local.audio ?
-            <React.Fragment>
-                <div className="audio-player">
-                  <button className="audio-play" data-comment-anchor="5c4734264f-button-128-19"><I.Play size={14} /></button>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, marginBottom: 6, fontFamily: "var(--font-mono)" }}>{local.audio.name}</div>
-                    <div className="audio-bar"><div className="audio-bar__progress" style={{ width: "0%" }} /></div>
-                  </div>
-                  <span className="audio-time">{local.audio.duration}</span>
-                </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                  <button className="btn btn--secondary btn--sm" onClick={() => audioInputRef.current.click()}><I.Upload size={14} /> {t("common.replace")}</button>
-                  <button className="btn btn--ghost btn--sm" onClick={() => {update({ audio: null });toast(t("custom.audioRemoved"));}}><I.Trash size={14} /> {t("common.remove")}</button>
-                  <input type="file" accept="audio/*" ref={audioInputRef} hidden onChange={(e) => {if (e.target.files[0]) {update({ audio: { name: e.target.files[0].name, duration: "0:58" } });toast(t("custom.audioReplaced"));}}} />
-                </div>
-              </React.Fragment> :
-
-            <div className="card-empty" style={{ padding: 24, textAlign: "center" }}>
-                <p className="muted" style={{ margin: "0 0 14px" }}>{t("custom.audioNone")}</p>
-                <button className="btn btn--primary btn--sm" onClick={() => audioInputRef.current.click()}><I.Mic size={14} /> {t("custom.audioImportBtn")}</button>
-                <input type="file" accept="audio/*" ref={audioInputRef} hidden onChange={(e) => {if (e.target.files[0]) {update({ audio: { name: e.target.files[0].name, duration: "0:58" } });toast(t("custom.audioReplaced"));}}} />
-              </div>
-            }
+            <AudioRecorder
+              existingUrl={local.audio_url || null}
+              onBlob={(blob) => {
+                setAudioBlob(blob);
+              }}
+              onRemove={() => {
+                setAudioBlob(null);
+                update({ audio: null, audio_url: null });
+              }}
+            />
           </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="card" style={{ padding: 28 }} data-comment-anchor="e1dd7be198-div-152-11">
+          {/* Infos générales */}
+          <div className="card" style={{ padding: 28 }}>
             <h3 className="display" style={{ margin: "0 0 18px", fontSize: 22, fontWeight: 500 }}>{t("custom.infoSection")}</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               <Field label={t("common.cvName")}><input className="input" value={local.name} onChange={(e) => update({ name: e.target.value })} /></Field>
@@ -165,6 +231,7 @@ const CustomizeEdit = ({ cv, onSave, onPreview, onUpdate, toast, navigate }) => 
             </div>
           </div>
 
+          {/* Boutons */}
           <div className="card" style={{ padding: 28 }}>
             <h3 className="display" style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 500 }}>{t("custom.buttonsSection")}</h3>
             <p className="muted" style={{ margin: "0 0 10px", fontSize: 13 }}>{t("custom.buttonsSub")}</p>
@@ -187,6 +254,7 @@ const CustomizeEdit = ({ cv, onSave, onPreview, onUpdate, toast, navigate }) => 
             </ButtonToggleRow>
           </div>
 
+          {/* Preview / save box */}
           <div className="card card--soft" style={{ padding: 22, display: "flex", gap: 14, alignItems: "center", justifyContent: "space-between" }}>
             <div>
               <div style={{ fontWeight: 500 }}>{t("custom.previewBox.title")}</div>
@@ -194,7 +262,9 @@ const CustomizeEdit = ({ cv, onSave, onPreview, onUpdate, toast, navigate }) => 
             </div>
             <div className="row gap-8">
               <button className="btn btn--secondary" onClick={() => onPreview(local)}><I.Eye size={14} /> {t("common.preview")}</button>
-              <button className="btn btn--primary" onClick={() => {onSave(local);toast(t("custom.saved"));}}>{t("common.save")}</button>
+              <button className="btn btn--primary" onClick={handleSave} disabled={saving}>
+                {saving ? "Sauvegarde…" : t("common.save")}
+              </button>
             </div>
           </div>
         </div>
@@ -202,7 +272,6 @@ const CustomizeEdit = ({ cv, onSave, onPreview, onUpdate, toast, navigate }) => 
 
       <style>{`@media (max-width: 1000px) { .page > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; } .page > div > div:first-child { position: static !important; } }`}</style>
     </div>);
-
 };
 
 Object.assign(window, { CustomizeSelect, CustomizeEdit });

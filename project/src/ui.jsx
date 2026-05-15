@@ -32,42 +32,22 @@ const Field = ({ label, children, hint }) => (
   </div>
 );
 
-// Decorative QR — non-functional but looks legit
-const QRBlock = ({ size = 200 }) => {
-  // generate a deterministic pattern
-  const cells = useMemo(() => {
-    const n = 23;
-    const out = [];
-    const seed = (i, j) => ((i*31 + j*17 + (i^j)*7) % 7) < 3;
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        // corners (finder patterns)
-        const inFinder = (i < 7 && j < 7) || (i < 7 && j > n-8) || (i > n-8 && j < 7);
-        if (inFinder) continue;
-        if (seed(i, j)) out.push({ i, j });
-      }
+// QRBlock — génère un vrai QR code via la lib QRCode (CDN)
+const QRBlock = ({ size = 200, url }) => {
+  const canvasRef = useRef();
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    if (url && window.QRCode) {
+      QRCode.toCanvas(
+        canvasRef.current,
+        url,
+        { width: size, margin: 2, color: { dark: '#1B1814', light: '#ffffff' } },
+        () => {}
+      );
     }
-    return out;
-  }, []);
-  const cell = size / 23;
-  const Finder = ({ x, y }) => (
-    <g transform={`translate(${x},${y})`}>
-      <rect width={cell*7} height={cell*7} fill="#1B1814" rx="2"/>
-      <rect x={cell} y={cell} width={cell*5} height={cell*5} fill="#fff"/>
-      <rect x={cell*2} y={cell*2} width={cell*3} height={cell*3} fill="#1B1814" rx="1"/>
-    </g>
-  );
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}>
-      <rect width={size} height={size} fill="#fff"/>
-      <Finder x={0} y={0}/>
-      <Finder x={(23-7)*cell} y={0}/>
-      <Finder x={0} y={(23-7)*cell}/>
-      {cells.map((c, idx) => (
-        <rect key={idx} x={c.j*cell} y={c.i*cell} width={cell*0.95} height={cell*0.95} fill="#1B1814"/>
-      ))}
-    </svg>
-  );
+  }, [url, size]);
+  if (!url) return <div style={{ width: size, height: size, background: "var(--bg-soft)", borderRadius: 8 }}/>;
+  return <canvas ref={canvasRef} style={{ borderRadius: 8 }}/>;
 };
 
 // Realistic A4 CV preview (PDF-style, two-column). Uses transform: scale() so
@@ -158,7 +138,7 @@ const CVPreviewVisual = ({ cv, scale = 1, float3d = false }) => {
         <aside style={{ background: p.sidebar, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
           {/* Avatar */}
           <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#fff", border: `2px solid ${p.accent}`, margin: "2px auto 4px", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 500, color: p.accent }}>
-            {u.firstName[0]}{u.lastName[0]}
+            {(u.firstName || '?')[0]}{(u.lastName || '?')[0]}
           </div>
 
           <div>
@@ -170,8 +150,8 @@ const CVPreviewVisual = ({ cv, scale = 1, float3d = false }) => {
             <div style={{ fontSize: 6.5, letterSpacing: "0.14em", textTransform: "uppercase", color: p.accent, fontWeight: 600, marginBottom: 5 }}>{c.labels.contact}</div>
             <div style={{ fontSize: 6.8, lineHeight: 1.45, color: "#1B1814", wordBreak: "break-word" }}>
               <div>{u.email}</div>
-              <div>+33 {u.phone.replace(/(\d{1})(\d{2})(\d{2})(\d{2})(\d{2})/, "$1 $2 $3 $4 $5")}</div>
-              <div>Paris, France</div>
+              <div>{u.phone ? `+33 ${u.phone.replace(/(\d{1})(\d{2})(\d{2})(\d{2})(\d{2})/, "$1 $2 $3 $4 $5")}` : ''}</div>
+              <div>France</div>
             </div>
           </div>
 
@@ -206,7 +186,7 @@ const CVPreviewVisual = ({ cv, scale = 1, float3d = false }) => {
         <main style={{ padding: "18px 16px 14px", display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
           <header>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.005em" }}>
-              {u.firstName}<br/>{u.lastName}
+              {u.firstName || '—'}<br/>{u.lastName || ''}
             </div>
             <div style={{ marginTop: 5, fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase", color: p.accent, fontWeight: 600 }}>
               {c.title}
@@ -269,4 +249,99 @@ function useToast() {
   return { Toast: <Toast message={t.msg} show={t.show}/>, show };
 }
 
-Object.assign(window, { Modal, Toggle, Field, QRBlock, CVPreviewVisual, Toast, useToast });
+// ---------------------------------------------------------------------------
+// AudioRecorder
+// ---------------------------------------------------------------------------
+const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
+  const [recording, setRecording] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState(existingUrl || null);
+  const mrRef = useRef(null);
+  const timerRef = useRef(null);
+  const chunksRef = useRef([]);
+  const MAX_SEC = 60;
+
+  const stopRecording = () => {
+    clearInterval(timerRef.current);
+    if (mrRef.current && mrRef.current.state !== 'inactive') mrRef.current.stop();
+    setRecording(false);
+  };
+
+  const start = () => {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => {
+        const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        chunksRef.current = [];
+        mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+        mr.onstop = () => {
+          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          setPreviewUrl(url);
+          onBlob && onBlob(blob);
+          stream.getTracks().forEach((track) => track.stop());
+        };
+        mr.start(100);
+        mrRef.current = mr;
+        setElapsed(0);
+        setRecording(true);
+        timerRef.current = setInterval(() => {
+          setElapsed((s) => {
+            if (s + 1 >= MAX_SEC) { stopRecording(); return MAX_SEC; }
+            return s + 1;
+          });
+        }, 1000);
+      })
+      .catch(() => {
+        alert("Impossible d'accéder au microphone. Vérifiez les permissions.");
+      });
+  };
+
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+  const remove = () => {
+    setPreviewUrl(null);
+    onRemove && onRemove();
+  };
+
+  return (
+    <div>
+      {!previewUrl ? (
+        <div className="card-empty" style={{ padding: 18, textAlign: 'center' }}>
+          {recording ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--red, #ef4444)', animation: 'pulse 1s infinite' }}/>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18 }}>{fmt(elapsed)} / {fmt(MAX_SEC)}</span>
+              </div>
+              <div style={{ width: '100%', height: 4, background: 'var(--bg-soft)', borderRadius: 2 }}>
+                <div style={{ width: (elapsed / MAX_SEC * 100) + '%', height: '100%', background: 'var(--red, #ef4444)', borderRadius: 2, transition: 'width 1s linear' }}/>
+              </div>
+              <button className="btn btn--danger btn--sm" onClick={stopRecording}>
+                <I.X size={14}/> Arrêter
+              </button>
+            </div>
+          ) : (
+            <button className="btn btn--secondary btn--sm" onClick={start}>
+              <I.Mic size={14}/> Enregistrer (max 1 min)
+            </button>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <audio src={previewUrl} controls style={{ width: '100%' }}/>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn--secondary btn--sm" onClick={start}>
+              <I.Mic size={14}/> Ré-enregistrer
+            </button>
+            <button className="btn btn--ghost btn--sm" onClick={remove}>
+              <I.Trash size={14}/> Supprimer
+            </button>
+          </div>
+        </div>
+      )}
+      <style>{`@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
+    </div>
+  );
+};
+
+Object.assign(window, { Modal, Toggle, Field, QRBlock, CVPreviewVisual, Toast, useToast, AudioRecorder });

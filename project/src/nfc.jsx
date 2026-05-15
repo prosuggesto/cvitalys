@@ -1,10 +1,59 @@
-// Support NFC page
+// Support NFC page — connecté à Supabase
 
-const NFCPage = ({ cvs, toast }) => {
+const NFCPage = ({ cvs, session, toast }) => {
   const { t } = useT();
-  const [selected, setSelected] = useState(cvs[0]?.id || "");
-  const link = `https://cvitalis.app/#/cv?c=7PESHT`;
+  const [nfcCards, setNfcCards] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [selectedCvId, setSelectedCvId] = useState(cvs[0]?.dbId || "");
+
   const steps = t("nfc.steps");
+
+  useEffect(() => {
+    if (!session) return;
+    api.getNfcCards(session.user.id)
+      .then((cards) => {
+        setNfcCards(cards);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  // Utiliser la première carte NFC si elle existe
+  const nfcCard = nfcCards[0] || null;
+  const link = nfcCard
+    ? `${window.location.origin}${window.location.pathname}#/nfc/${nfcCard.code_court}`
+    : null;
+
+  const handleCreate = () => {
+    if (!session || !selectedCvId) return;
+    setCreating(true);
+    const cvDbId = typeof selectedCvId === 'string' && selectedCvId.startsWith('cv')
+      ? cvs.find((c) => c.id === selectedCvId)?.dbId
+      : Number(selectedCvId);
+    api.createNfcCard(session.user.id, cvDbId)
+      .then((card) => {
+        setNfcCards([card, ...nfcCards]);
+        setCreating(false);
+        toast("Carte NFC créée !");
+      })
+      .catch((err) => {
+        setCreating(false);
+        toast("Erreur : " + (err.message || "création échouée"));
+      });
+  };
+
+  const handleChangeCV = (newCvId) => {
+    if (!nfcCard) return;
+    const cvDbId = cvs.find((c) => c.id === newCvId)?.dbId || Number(newCvId);
+    api.updateNfcCard(nfcCard.id, { cv_id: cvDbId })
+      .then(() => {
+        toast("CV associé mis à jour !");
+      })
+      .catch((err) => {
+        toast("Erreur : " + (err.message || "mise à jour échouée"));
+      });
+  };
 
   return (
     <div className="page" style={{ maxWidth: 920 }}>
@@ -24,29 +73,63 @@ const NFCPage = ({ cvs, toast }) => {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 28, marginBottom: 22 }}>
-        <div className="between" style={{ marginBottom: 18 }}>
-          <h3 className="display" style={{ margin: 0, fontSize: 24, fontWeight: 500 }}>{t("nfc.linkTitle")}</h3>
-          <span className="badge badge--green badge--dot">{t("common.active")}</span>
+      {loading ? (
+        <div className="card" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+          Chargement…
         </div>
-        <div style={{ padding: "16px 20px", background: "var(--surface-2)", border: "1px solid var(--border-soft)", borderRadius: 12, fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink)", marginBottom: 18, wordBreak: "break-all" }}>
-          {link}
-        </div>
-        <div className="row gap-12">
-          <button className="btn btn--primary" onClick={() => { navigator.clipboard?.writeText(link); toast(t("common.copied")); }}><I.Copy size={14}/> {t("nfc.copyBtn")}</button>
-          <button className="btn btn--secondary"><I.Open size={14}/> {t("nfc.openBtn")}</button>
-        </div>
-      </div>
+      ) : nfcCard ? (
+        <React.Fragment>
+          <div className="card" style={{ padding: 28, marginBottom: 22 }}>
+            <div className="between" style={{ marginBottom: 18 }}>
+              <h3 className="display" style={{ margin: 0, fontSize: 24, fontWeight: 500 }}>{t("nfc.linkTitle")}</h3>
+              <span className="badge badge--green badge--dot">{t("common.active")}</span>
+            </div>
+            <div style={{ padding: "16px 20px", background: "var(--surface-2)", border: "1px solid var(--border-soft)", borderRadius: 12, fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink)", marginBottom: 18, wordBreak: "break-all" }}>
+              {link}
+            </div>
+            <div className="row gap-12">
+              <button className="btn btn--primary" onClick={() => { navigator.clipboard?.writeText(link); toast(t("common.copied")); }}>
+                <I.Copy size={14}/> {t("nfc.copyBtn")}
+              </button>
+              <button className="btn btn--secondary" onClick={() => { if (link) window.open(link, '_blank'); }}>
+                <I.Open size={14}/> {t("nfc.openBtn")}
+              </button>
+            </div>
+          </div>
 
-      <div className="card" style={{ padding: 28, marginBottom: 22 }}>
-        <h3 className="display" style={{ margin: "0 0 16px", fontSize: 24, fontWeight: 500 }}>{t("nfc.showCvTitle")}</h3>
-        <select className="select" value={selected} onChange={(e) => setSelected(e.target.value)}>
-          {cvs.map((c) => <option key={c.id} value={c.id}>{c.name} — {c.role}</option>)}
-        </select>
-        <p className="muted" style={{ margin: "12px 0 0", fontSize: 13 }}>
-          {t("nfc.showCvHint")}
-        </p>
-      </div>
+          <div className="card" style={{ padding: 28, marginBottom: 22 }}>
+            <h3 className="display" style={{ margin: "0 0 16px", fontSize: 24, fontWeight: 500 }}>{t("nfc.showCvTitle")}</h3>
+            <select
+              className="select"
+              defaultValue={nfcCard.cv_id || ""}
+              onChange={(e) => {
+                const found = cvs.find((c) => String(c.dbId) === e.target.value);
+                if (found) handleChangeCV(found.id);
+              }}>
+              {cvs.map((c) => <option key={c.id} value={String(c.dbId)}>{c.name} — {c.role}</option>)}
+            </select>
+            <p className="muted" style={{ margin: "12px 0 0", fontSize: 13 }}>
+              {t("nfc.showCvHint")}
+            </p>
+          </div>
+        </React.Fragment>
+      ) : (
+        <div className="card" style={{ padding: 32, marginBottom: 22, textAlign: "center" }}>
+          <div className="muted" style={{ marginBottom: 20, fontSize: 14 }}>Pas encore de carte NFC. Créez-en une pour commencer.</div>
+          {cvs.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
+              <select className="select" style={{ maxWidth: 320 }} value={selectedCvId} onChange={(e) => setSelectedCvId(e.target.value)}>
+                {cvs.map((c) => <option key={c.id} value={c.dbId}>{c.name} — {c.role}</option>)}
+              </select>
+              <button className="btn btn--primary" onClick={handleCreate} disabled={creating}>
+                <I.Wifi size={14}/> {creating ? "Création…" : "Créer un support NFC"}
+              </button>
+            </div>
+          ) : (
+            <div className="muted" style={{ fontSize: 13 }}>Créez d'abord un CV avant d'associer une carte NFC.</div>
+          )}
+        </div>
+      )}
 
       <div className="card" style={{ padding: 32 }}>
         <h3 className="display" style={{ margin: "0 0 18px", fontSize: 24, fontWeight: 500 }}>{t("nfc.howTitle")}</h3>

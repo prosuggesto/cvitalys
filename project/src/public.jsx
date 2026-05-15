@@ -1,4 +1,4 @@
-// Public CV page (recruiter view after scan) + exchange/feedback modals
+// Page publique CV (vue recruteur après scan) + tracking stats + NFC redirect
 
 const SecondaryContactBtn = ({ icon, brand, label, onClick }) => {
   const Ico = icon ? I[icon] : null;
@@ -6,7 +6,6 @@ const SecondaryContactBtn = ({ icon, brand, label, onClick }) => {
     <button onClick={onClick} className="icon-btn" style={{ width: 48, height: 48, border: "1px solid var(--border-strong)", borderRadius: "50%", flexShrink: 0, padding: 0, overflow: "hidden", background: "var(--surface)" }} title={label}>
       {brand ? <BrandLogo name={brand} size={22} /> : <Ico size={17} />}
     </button>);
-
 };
 
 const ExchangeModal = ({ open, onClose, cv, user, toast }) => {
@@ -15,18 +14,10 @@ const ExchangeModal = ({ open, onClose, cv, user, toast }) => {
   useEffect(() => {if (open) setF({ company: "", recruiter: "", note: "", date: "" });}, [open]);
   const submit = (e) => {
     e.preventDefault();
+    if (cv && cv.short_code) api.incrementStat(cv.short_code, 'clic_echange');
     const subject = encodeURIComponent(`Demande d'échange — CV de ${user.firstName} ${user.lastName}`);
     const body = encodeURIComponent(
-      `Bonjour ${user.firstName},
-
-Nous avons consulté votre CV digital et souhaitons échanger avec vous.
-
-Entreprise : ${f.company || "—"}
-Recruteur : ${f.recruiter || "—"}
-Date souhaitée : ${f.date || "—"}
-Commentaire : ${f.note || "—"}
-
-Cordialement.`
+      `Bonjour ${user.firstName},\n\nNous avons consulté votre CV digital et souhaitons échanger avec vous.\n\nEntreprise : ${f.company || "—"}\nRecruteur : ${f.recruiter || "—"}\nDate souhaitée : ${f.date || "—"}\nCommentaire : ${f.note || "—"}\n\nCordialement.`
     );
     window.open(`mailto:${user.email}?subject=${subject}&body=${body}`, "_blank");
     toast(t("public.mailOpened"));
@@ -49,7 +40,6 @@ Cordialement.`
         </form>
       </div>
     </Modal>);
-
 };
 
 const FeedbackModal = ({ open, onClose, cv, user, toast }) => {
@@ -58,17 +48,10 @@ const FeedbackModal = ({ open, onClose, cv, user, toast }) => {
   useEffect(() => {if (open) setF({ company: "", recruiter: "", note: "" });}, [open]);
   const submit = (e) => {
     e.preventDefault();
+    if (cv && cv.short_code) api.incrementStat(cv.short_code, 'clic_retour');
     const subject = encodeURIComponent(`Retour recruteur — CV de ${user.firstName} ${user.lastName}`);
     const body = encodeURIComponent(
-      `Bonjour ${user.firstName},
-
-Nous avons consulté votre CV digital et souhaitons vous faire un retour.
-
-Entreprise : ${f.company || "—"}
-Recruteur : ${f.recruiter || "—"}
-Commentaire : ${f.note || "—"}
-
-Cordialement.`
+      `Bonjour ${user.firstName},\n\nNous avons consulté votre CV digital et souhaitons vous faire un retour.\n\nEntreprise : ${f.company || "—"}\nRecruteur : ${f.recruiter || "—"}\nCommentaire : ${f.note || "—"}\n\nCordialement.`
     );
     window.open(`mailto:${user.email}?subject=${subject}&body=${body}`, "_blank");
     toast(t("public.mailOpened"));
@@ -90,29 +73,97 @@ Cordialement.`
         </form>
       </div>
     </Modal>);
-
 };
 
-// Audio player with simulated playback
-const PublicAudioPlayer = ({ duration = "1:08" }) => {
+// Audio player réel avec tracking stats
+const PublicAudioPlayer = ({ audioUrl, shortCode }) => {
+  const { t } = useT();
+  const audioRef = useRef();
+  const [playing, setPlaying] = useState(false);
+  const [pct, setPct] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onLoaded = () => setDuration(audio.duration || 0);
+    const onTime = () => {
+      setCurrentTime(audio.currentTime);
+      setPct(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0);
+    };
+    const onEnded = () => {
+      setPlaying(false);
+      if (shortCode) {
+        api.incrementStat(shortCode, 'audio_complet');
+        api.incrementStat(shortCode, 'temps_audio', Math.floor(audio.duration || 0));
+      }
+    };
+    audio.addEventListener('loadedmetadata', onLoaded);
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('ended', onEnded);
+    return () => {
+      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('timeupdate', onTime);
+      audio.removeEventListener('ended', onEnded);
+    };
+  }, [shortCode]);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+    } else {
+      audio.play();
+      setPlaying(true);
+      if (!startedRef.current && shortCode) {
+        api.incrementStat(shortCode, 'audio_demarre');
+        startedRef.current = true;
+      }
+    }
+  };
+
+  const fmt = (s) => {
+    const secs = Math.floor(s || 0);
+    return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+  };
+
+  return (
+    <div style={{ padding: 18, background: "var(--surface-2)", borderRadius: 18, border: "1px solid var(--border-soft)" }}>
+      <audio ref={audioRef} src={audioUrl} preload="metadata" style={{ display: 'none' }}/>
+      <div className="row gap-12">
+        <button className="audio-play" onClick={togglePlay} style={{ width: 44, height: 44 }}>
+          {playing ? <I.Pause size={14} /> : <I.Play size={14} />}
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6, letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("public.audioLabel")}</div>
+          <div className="audio-bar"><div className="audio-bar__progress" style={{ width: pct + "%" }} /></div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+            <span className="audio-time">{fmt(currentTime)}</span>
+            <span className="audio-time">{fmt(duration)}</span>
+          </div>
+        </div>
+      </div>
+    </div>);
+};
+
+// Audio player simulé (pour CVs sans audio_url)
+const SimulatedAudioPlayer = ({ duration: durationStr = "1:08" }) => {
   const { t } = useT();
   const [playing, setPlaying] = useState(false);
   const [pct, setPct] = useState(0);
   useEffect(() => {
     if (!playing) return;
     const id = setInterval(() => {
-      setPct((p) => {
-        if (p >= 100) {setPlaying(false);return 100;}
-        return p + 0.6;
-      });
+      setPct((p) => { if (p >= 100) { setPlaying(false); return 100; } return p + 0.6; });
     }, 80);
     return () => clearInterval(id);
   }, [playing]);
-  const parseTime = (str) => {
-    const [m, s] = str.split(":").map(Number);
-    return m * 60 + s;
-  };
-  const totalSec = parseTime(duration);
+  const parseTime = (str) => { const [m, s] = (str || '1:08').split(":").map(Number); return m * 60 + s; };
+  const totalSec = parseTime(durationStr);
   const curSec = Math.floor(pct / 100 * totalSec);
   const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   return (
@@ -126,12 +177,11 @@ const PublicAudioPlayer = ({ duration = "1:08" }) => {
           <div className="audio-bar"><div className="audio-bar__progress" style={{ width: pct + "%" }} /></div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
             <span className="audio-time">{fmt(curSec)}</span>
-            <span className="audio-time">{duration}</span>
+            <span className="audio-time">{durationStr}</span>
           </div>
         </div>
       </div>
     </div>);
-
 };
 
 const ContactRow = ({ icon, label, value }) => {
@@ -142,11 +192,10 @@ const ContactRow = ({ icon, label, value }) => {
       <span className="muted" style={{ width: 90, fontSize: 12, letterSpacing: "0.06em" }}>{label}</span>
       <span style={{ flex: 1, textAlign: "right" }}>{value}</span>
     </div>);
-
 };
 
 // Reusable card UI used both in landing preview and full public page
-const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv }) => {
+const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, shortCode }) => {
   const { t } = useT();
   if (!cv) return null;
   return (
@@ -163,9 +212,15 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv }) =
           </button>
         }
       </div>
+
+      {/* Audio player */}
       <div style={{ marginTop: 16 }}>
-        <PublicAudioPlayer duration={cv.audio?.duration || "1:08"} />
+        {cv.audio_url
+          ? <PublicAudioPlayer audioUrl={cv.audio_url} shortCode={shortCode}/>
+          : <SimulatedAudioPlayer duration={cv.audio?.duration || "1:08"}/>
+        }
       </div>
+
       <div style={{ marginTop: 18, padding: "16px 4px", borderTop: "1px solid var(--border-soft)" }}>
         <div className="eyebrow" style={{ marginBottom: 6 }}>{t("public.candidate")}</div>
         <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: 0 }}>{user.firstName} {user.lastName}</h2>
@@ -194,11 +249,11 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv }) =
       <div style={{ marginTop: 18 }}>
           <div className="eyebrow" style={{ textAlign: "center", marginBottom: 12 }}>{t("public.otherChannels")}</div>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            {cv.buttons.whatsapp && <SecondaryContactBtn brand="whatsapp" label="WhatsApp" onClick={() => window.open(`https://wa.me/${cv.contact.whatsapp.replace(/\D/g, '')}`)} />}
-            {cv.buttons.email && <SecondaryContactBtn brand="gmail" label="Email" onClick={() => window.open(`mailto:${cv.contact.email}`)} />}
-            {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => window.open("https://" + cv.contact.linkedin)} />}
-            {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" />}
-            {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" />}
+            {cv.buttons.whatsapp && <SecondaryContactBtn brand="whatsapp" label="WhatsApp" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_whatsapp'); window.open(`https://wa.me/${(cv.contact.whatsapp || '').replace(/\D/g, '')}`); }} />}
+            {cv.buttons.email && <SecondaryContactBtn brand="gmail" label="Email" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_email'); window.open(`mailto:${cv.contact.email}`); }} />}
+            {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_linkedin'); window.open('https://' + cv.contact.linkedin); }} />}
+            {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_instagram'); window.open('https://instagram.com/' + (cv.contact.instagram || '').replace('@', '')); }} />}
+            {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_site_web'); window.open(cv.contact.website); }} />}
           </div>
         </div>
       }
@@ -211,37 +266,94 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv }) =
         </div>
       }
 
-      <div style={{ marginTop: 14, textAlign: "center", fontSize: 11, color: "var(--subtle)" }} data-comment-anchor="05fec32307-div-214-7">
+      <div style={{ marginTop: 14, textAlign: "center", fontSize: 11, color: "var(--subtle)" }}>
         <a className="link-underline" href="#/" style={{ color: "var(--subtle)" }}>{t("common.poweredBy")}</a>
       </div>
     </div>);
-
 };
 
-const PublicPage = ({ cv, user, navigate }) => {
+// Page publique chargée via shortCode depuis Supabase
+const PublicPage = ({ shortCode, navigate }) => {
   const { t } = useT();
+  const [cvData, setCvData] = useState(null); // { cv, profil }
+  const [loading, setLoading] = useState(true);
   const [exchange, setExchange] = useState(false);
   const [feedback, setFeedback] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const { Toast: T, show } = useToast();
-  if (!cv) return (
-    <div data-no-chrome className="public-shell">
-      <div className="public-card" style={{ padding: 40, textAlign: "center" }}>
-        <h2 className="display" style={{ fontSize: 28 }}>{t("public.notFound")}</h2>
-        <p className="muted">{t("public.notFoundSub")}</p>
-        <button className="btn btn--primary" onClick={() => navigate("/")}>{t("public.backHome")}</button>
+  const startTimeRef = useRef(Date.now());
+
+  useEffect(() => {
+    if (!shortCode) { setLoading(false); return; }
+
+    api.getCvByShortCode(shortCode)
+      .then((data) => {
+        setCvData(data);
+        setLoading(false);
+        // Incrémenter le scan
+        if (data) api.incrementStat(shortCode, 'scan');
+      })
+      .catch(() => setLoading(false));
+
+    // Tracker le temps passé sur la page
+    const handleUnload = () => {
+      const secondes = Math.round((Date.now() - startTimeRef.current) / 1000);
+      if (secondes > 2) api.incrementStat(shortCode, 'temps_page', secondes);
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [shortCode]);
+
+  if (loading) {
+    return (
+      <div data-no-chrome className="public-shell">
+        <div className="public-card" style={{ padding: 40, textAlign: "center" }}>
+          <Brand size={20}/>
+          <p className="muted" style={{ marginTop: 20 }}>Chargement…</p>
+        </div>
       </div>
-    </div>);
+    );
+  }
+
+  if (!cvData) {
+    return (
+      <div data-no-chrome className="public-shell">
+        <div className="public-card" style={{ padding: 40, textAlign: "center" }}>
+          <h2 className="display" style={{ fontSize: 28 }}>{t("public.notFound")}</h2>
+          <p className="muted">{t("public.notFoundSub")}</p>
+          <button className="btn btn--primary" onClick={() => navigate("/")}>{t("public.backHome")}</button>
+        </div>
+      </div>
+    );
+  }
+
+  const { cv, profil } = cvData;
+  const user = profil
+    ? { firstName: profil.prenom || '', lastName: profil.nom || '', email: profil.email || cv.contact.email || '', phone: profil.telephone || cv.contact.phone || '' }
+    : { firstName: '', lastName: '', email: cv.contact.email || '', phone: cv.contact.phone || '' };
+
+  // Synchroniser MOCK.initialUser pour le preview visuel
+  window.MOCK.initialUser = { firstName: user.firstName, lastName: user.lastName, email: user.email, phone: user.phone, plan: 'Pro', renewalDate: '' };
+
+  const handleViewCv = () => {
+    api.incrementStat(shortCode, 'clic_voir_cv');
+    if (cv.cv_url) {
+      window.open(cv.cv_url, '_blank');
+    } else {
+      setViewerOpen(true);
+    }
+  };
 
   return (
     <div data-no-chrome className="public-shell">
       <PublicCVCard
         cv={cv}
         user={user}
+        shortCode={shortCode}
         onExchange={() => setExchange(true)}
         onFeedback={() => setFeedback(true)}
-        onViewCv={() => setViewerOpen(true)} />
-      
+        onViewCv={handleViewCv}
+      />
 
       <ExchangeModal open={exchange} onClose={() => setExchange(false)} cv={cv} user={user} toast={show} />
       <FeedbackModal open={feedback} onClose={() => setFeedback(false)} cv={cv} user={user} toast={show} />
@@ -258,7 +370,24 @@ const PublicPage = ({ cv, user, navigate }) => {
 
       {T}
     </div>);
-
 };
 
-Object.assign(window, { PublicCVCard, PublicPage });
+// NFC Redirect — /#/nfc/:code → résout le code court NFC → redirige vers /cv/short_code
+const NfcRedirect = ({ code, navigate }) => {
+  useEffect(() => {
+    api.getNfcByCode(code).then((nfc) => {
+      if (nfc && nfc.cvs && nfc.cvs.short_code) {
+        navigate('/cv/' + nfc.cvs.short_code);
+      } else {
+        navigate('/');
+      }
+    });
+  }, []);
+  return (
+    <div data-no-chrome style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+      <Brand size={24}/>
+    </div>
+  );
+};
+
+Object.assign(window, { PublicCVCard, PublicPage, NfcRedirect });
