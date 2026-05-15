@@ -498,4 +498,53 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
   );
 };
 
-Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder });
+// ---------------------------------------------------------------------------
+// PdfCardPreview — affiche la 1re page d'un PDF dans un mini cadre A4
+// Utilise transform:scale pour réduire un grand iframe dans un petit conteneur
+// ---------------------------------------------------------------------------
+const PdfCardPreview = ({ url, width = 300 }) => {
+  const H = Math.round(width * 1.414); // ratio A4
+  const nativeW = 900, nativeH = Math.round(nativeW * 1.414);
+  const scale = width / nativeW;
+  return (
+    <div style={{
+      width, height: H, borderRadius: 8, overflow: 'hidden', background: '#fff',
+      boxShadow: '0 2px 12px rgba(27,24,20,0.10), 0 1px 3px rgba(27,24,20,0.06)',
+      position: 'relative', flexShrink: 0,
+    }}>
+      <div style={{ width: nativeW, height: nativeH, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
+        <iframe src={url} width={nativeW} height={nativeH} style={{ border: 'none', display: 'block' }} title="Aperçu CV"/>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// PdfCardPreview3D — même chose mais avec effet 3D flottant (pour Personnalisation)
+// ---------------------------------------------------------------------------
+const PdfCardPreview3D = ({ url, width = 280 }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', justifyContent: 'center', padding: '20px 0',
+        animation: 'cv-float 6s ease-in-out infinite',
+      }}
+    >
+      <div style={{
+        transform: hovered
+          ? 'perspective(1200px) rotateX(1deg) rotateY(-2deg)'
+          : 'perspective(1200px) rotateX(4deg) rotateY(-7deg)',
+        filter: 'drop-shadow(20px 16px 26px rgba(27,24,20,0.18)) drop-shadow(5px 4px 8px rgba(27,24,20,0.08))',
+        transition: 'transform .8s cubic-bezier(.2,.8,.2,1)',
+        borderRadius: 8, overflow: 'hidden', flexShrink: 0,
+      }}>
+        <PdfCardPreview url={url} width={width}/>
+      </div>
+    </div>
+  );
+};
+
+Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder, PdfCardPreview, PdfCardPreview3D });

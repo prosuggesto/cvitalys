@@ -19,7 +19,7 @@ const CVCard = ({ cv, onPresent, onCustomize, onPreview, onDelete }) => {
       </div>
     </div>
     <div style={{ display: "flex", justifyContent: "center", padding: "4px 0" }}>
-      <CVPreviewVisual cv={cv} scale={1}/>
+      {cv.cv_url ? <PdfCardPreview url={cv.cv_url} width={300}/> : <CVPreviewVisual cv={cv} scale={1}/>}
     </div>
     <button className="btn btn--primary btn--block" onClick={onPresent}>
       <I.QR size={16}/> {t("cvs.present")}

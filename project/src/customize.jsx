@@ -218,11 +218,9 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
 
             {displayPdfUrl ? (
               <React.Fragment>
-                {/* Iframe PDF réel */}
-                <div style={{ width: '100%', height: 480, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 16 }}>
-                  <iframe src={displayPdfUrl} width="100%" height="100%" style={{ border: 'none', display: 'block' }} title="Aperçu CV" />
-                </div>
-                <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                {/* PDF avec effet 3D */}
+                <PdfCardPreview3D url={displayPdfUrl} width={260}/>
+                <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 4 }}>
                   <button className="btn btn--secondary btn--sm" onClick={() => fileInputRef.current.click()}>
                     <I.Upload size={14} /> {t("common.replace")}
                   </button>
