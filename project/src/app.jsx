@@ -162,6 +162,7 @@ function AppInner() {
     page = <CustomizeEdit
       cv={cv}
       session={session}
+      profile={profile}
       onSave={(updated) => setCvs(cvs.map((c) => c.id === updated.id ? updated : c))}
       onPreview={(cv) => navigate(`/cv/${cv.short_code || cv.id}`)}
       toast={toast}

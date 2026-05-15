@@ -249,8 +249,8 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
       <div style={{ marginTop: 18 }}>
           <div className="eyebrow" style={{ textAlign: "center", marginBottom: 12 }}>{t("public.otherChannels")}</div>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            {cv.buttons.whatsapp && <SecondaryContactBtn brand="whatsapp" label="WhatsApp" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_whatsapp'); window.open(`https://wa.me/${(cv.contact.whatsapp || '').replace(/\D/g, '')}`); }} />}
-            {cv.buttons.email && <SecondaryContactBtn brand="gmail" label="Email" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_email'); window.open(`mailto:${cv.contact.email}`); }} />}
+            {cv.buttons.whatsapp && <SecondaryContactBtn brand="whatsapp" label="WhatsApp" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_whatsapp'); const wa = (cv.contact.whatsapp || user.phone || '').replace(/\D/g, ''); window.open(`https://wa.me/${wa}`); }} />}
+            {cv.buttons.email && <SecondaryContactBtn brand="gmail" label="Email" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_email'); window.open(`mailto:${cv.contact.email || user.email}`); }} />}
             {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_linkedin'); window.open('https://' + cv.contact.linkedin); }} />}
             {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_instagram'); window.open('https://instagram.com/' + (cv.contact.instagram || '').replace('@', '')); }} />}
             {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_site_web'); window.open(cv.contact.website); }} />}

@@ -47,7 +47,7 @@ const I = {
 const BRAND_SRC = {
   linkedin:  "assets/linkedin.png",
   instagram: "assets/instagram.webp",
-  gmail:     "assets/gmail.svg",
+  gmail:     "assets/gmail.webp",
   whatsapp:  "assets/whatsapp.svg",
 };
 const BrandLogo = ({ name, size = 18 }) => {
