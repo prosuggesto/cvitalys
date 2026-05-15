@@ -752,9 +752,61 @@ const DateTimePicker = ({ value, onChange, placeholder = 'Sélectionner une date
   );
 };
 
+// ---------------------------------------------------------------------------
+// DrumScroll — tambour défilant style horloge iPhone
+// ---------------------------------------------------------------------------
+const DrumScroll = ({ count, value, onChange, format = (n) => String(n).padStart(2, '0') }) => {
+  const ITEM_H = 52;
+  const ref = useRef();
+
+  // Init scroll au montage uniquement (évite feedback loop)
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = value * ITEM_H;
+  }, []);
+
+  const handleScroll = () => {
+    if (!ref.current) return;
+    const idx = Math.round(ref.current.scrollTop / ITEM_H);
+    const clamped = Math.max(0, Math.min(count - 1, idx));
+    onChange(clamped);
+  };
+
+  const items = Array.from({ length: count }, (_, i) => i);
+
+  return (
+    <div style={{ position: 'relative', width: 90, height: ITEM_H * 5, overflow: 'hidden', borderRadius: 16 }}>
+      <style>{`.drum-si::-webkit-scrollbar{display:none}`}</style>
+      {/* Lignes de sélection */}
+      <div style={{ position: 'absolute', top: ITEM_H * 2, left: 6, right: 6, height: ITEM_H, borderTop: '1px solid var(--border-strong)', borderBottom: '1px solid var(--border-strong)', pointerEvents: 'none', zIndex: 2 }} />
+      {/* Fondu haut */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: ITEM_H * 2 + 10, background: 'linear-gradient(to bottom, var(--surface) 35%, transparent)', pointerEvents: 'none', zIndex: 3 }} />
+      {/* Fondu bas */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: ITEM_H * 2 + 10, background: 'linear-gradient(to top, var(--surface) 35%, transparent)', pointerEvents: 'none', zIndex: 3 }} />
+      <div
+        ref={ref}
+        className="drum-si"
+        onScroll={handleScroll}
+        style={{ height: '100%', overflowY: 'scroll', scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
+      >
+        <div style={{ height: ITEM_H * 2 }} />
+        {items.map((i) => (
+          <div key={i} style={{ height: ITEM_H, scrollSnapAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 500, fontFamily: 'var(--font-mono, monospace)', color: 'var(--ink)', userSelect: 'none', flexShrink: 0 }}>
+            {format(i)}
+          </div>
+        ))}
+        <div style={{ height: ITEM_H * 2 }} />
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// DateTimePickerModal — 2 étapes : calendrier → heure tambour
+// ---------------------------------------------------------------------------
 const DateTimePickerModal = ({ value, onConfirm, onClear, onClose }) => {
   const initial = value ? new Date(value) : new Date();
   const safeInitial = isNaN(initial) ? new Date() : initial;
+  const [step, setStep] = useState('calendar');
   const [month, setMonth] = useState(new Date(safeInitial.getFullYear(), safeInitial.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : null);
   const [hour, setHour] = useState(value ? safeInitial.getHours() : 9);
@@ -764,30 +816,25 @@ const DateTimePickerModal = ({ value, onConfirm, onClear, onClose }) => {
   const dayNames = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
 
   const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
-  const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-  const startDow = (firstDay.getDay() + 6) % 7; // Lundi = 0
+  const lastDay  = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const startDow = (firstDay.getDay() + 6) % 7;
   const daysInMonth = lastDay.getDate();
   const prevLast = new Date(month.getFullYear(), month.getMonth(), 0).getDate();
 
   const cells = [];
-  for (let i = startDow - 1; i >= 0; i--) {
+  for (let i = startDow - 1; i >= 0; i--)
     cells.push({ day: prevLast - i, current: false, date: new Date(month.getFullYear(), month.getMonth() - 1, prevLast - i) });
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
+  for (let d = 1; d <= daysInMonth; d++)
     cells.push({ day: d, current: true, date: new Date(month.getFullYear(), month.getMonth(), d) });
-  }
   let trailing = 1;
-  while (cells.length < 42) {
-    cells.push({ day: trailing, current: false, date: new Date(month.getFullYear(), month.getMonth() + 1, trailing) });
-    trailing++;
-  }
+  while (cells.length < 42)
+    cells.push({ day: trailing, current: false, date: new Date(month.getFullYear(), month.getMonth() + 1, trailing++) });
 
   const today = new Date();
   const sameDay = (a, b) => a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-
   const navMonth = (delta) => setMonth(new Date(month.getFullYear(), month.getMonth() + delta, 1));
 
-  const setToday = () => {
+  const goToday = () => {
     const now = new Date();
     setMonth(new Date(now.getFullYear(), now.getMonth(), 1));
     setSelectedDate(now);
@@ -800,118 +847,106 @@ const DateTimePickerModal = ({ value, onConfirm, onClear, onClose }) => {
     onConfirm(d.toISOString());
   };
 
-  const pad2 = (n) => String(n).padStart(2, '0');
-
   return (
-    <Modal open={true} onClose={onClose} width={460} zIndex={200}>
+    <Modal open={true} onClose={onClose} width={420} zIndex={200}>
       <div style={{ padding: 28 }}>
-        <h3 className="display" style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', textAlign: 'center' }}>
-          Date et heure
-        </h3>
-        <p className="muted" style={{ textAlign: 'center', margin: '0 0 22px', fontSize: 13 }}>
-          Sélectionnez le jour puis l'heure souhaitée
-        </p>
 
-        {/* Navigation mois */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <button type="button" onClick={() => navMonth(-1)} className="icon-btn" aria-label="Mois précédent">
-            <I.Arrow size={16} stroke="var(--ink-2)" sw={1.8} viewBox="0 0 24 24" />
-          </button>
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 19, letterSpacing: '-0.005em' }}>
-            {monthNames[month.getMonth()]} {month.getFullYear()}
-          </span>
-          <button type="button" onClick={() => navMonth(1)} className="icon-btn" aria-label="Mois suivant" style={{ transform: 'rotate(180deg)' }}>
-            <I.Arrow size={16} stroke="var(--ink-2)" sw={1.8} viewBox="0 0 24 24" />
-          </button>
-        </div>
+        {/* ── ÉTAPE 1 : Calendrier ── */}
+        {step === 'calendar' && (
+          <React.Fragment>
+            <h3 className="display" style={{ fontSize: 22, fontWeight: 500, margin: '0 0 22px', textAlign: 'center' }}>
+              Choisir la date
+            </h3>
 
-        {/* Jours de la semaine */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
-          {dayNames.map((d) => (
-            <div key={d} style={{ textAlign: 'center', fontSize: 11, color: 'var(--muted)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 0' }}>
-              {d}
-            </div>
-          ))}
-        </div>
-
-        {/* Grille des jours */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 22 }}>
-          {cells.map((c, i) => {
-            const isToday = sameDay(c.date, today);
-            const isSelected = sameDay(c.date, selectedDate);
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => c.current && setSelectedDate(c.date)}
-                disabled={!c.current}
-                style={{
-                  height: 40,
-                  border: isToday && !isSelected ? '1px solid var(--gold-deep)' : 'none',
-                  borderRadius: 999,
-                  cursor: c.current ? 'pointer' : 'default',
-                  background: isSelected ? 'var(--ink)' : 'transparent',
-                  color: isSelected ? '#F7F3EC' : !c.current ? 'var(--subtle)' : isToday ? 'var(--gold-deep)' : 'var(--ink)',
-                  fontWeight: isSelected || isToday ? 600 : 400,
-                  fontSize: 14,
-                  transition: 'background .15s, color .15s, transform .1s',
-                  fontFamily: 'inherit',
-                }}
-                onMouseEnter={(e) => { if (c.current && !isSelected) e.currentTarget.style.background = 'var(--bg-soft)'; }}
-                onMouseLeave={(e) => { if (c.current && !isSelected) e.currentTarget.style.background = 'transparent'; }}
-              >
-                {c.day}
+            {/* Navigation mois — ← gauche = précédent, → droite = suivant */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <button type="button" onClick={() => navMonth(-1)} className="icon-btn" aria-label="Mois précédent" style={{ transform: 'rotate(180deg)' }}>
+                <I.Arrow size={16} stroke="var(--ink-2)" sw={1.8} viewBox="0 0 24 24" />
               </button>
-            );
-          })}
-        </div>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 19, letterSpacing: '-0.005em' }}>
+                {monthNames[month.getMonth()]} {month.getFullYear()}
+              </span>
+              <button type="button" onClick={() => navMonth(1)} className="icon-btn" aria-label="Mois suivant">
+                <I.Arrow size={16} stroke="var(--ink-2)" sw={1.8} viewBox="0 0 24 24" />
+              </button>
+            </div>
 
-        {/* Heure */}
-        <div style={{ marginBottom: 22 }}>
-          <div className="label" style={{ marginBottom: 10, textAlign: 'center' }}>Heure</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center' }}>
-            <input
-              type="text" inputMode="numeric" maxLength={2}
-              value={pad2(hour)}
-              onChange={(e) => {
-                const n = parseInt(e.target.value.replace(/\D/g, '').slice(0, 2)) || 0;
-                setHour(Math.min(23, n));
-              }}
-              style={{
-                width: 78, height: 60, textAlign: 'center', fontSize: 26, fontWeight: 500,
-                border: '1px solid var(--border-strong)', borderRadius: 14, fontFamily: 'var(--font-mono)',
-                background: 'var(--surface)', outline: 'none', color: 'var(--ink)',
-              }}
-            />
-            <span style={{ fontSize: 26, fontWeight: 600, color: 'var(--muted)' }}>:</span>
-            <input
-              type="text" inputMode="numeric" maxLength={2}
-              value={pad2(minute)}
-              onChange={(e) => {
-                const n = parseInt(e.target.value.replace(/\D/g, '').slice(0, 2)) || 0;
-                setMinute(Math.min(59, n));
-              }}
-              style={{
-                width: 78, height: 60, textAlign: 'center', fontSize: 26, fontWeight: 500,
-                border: '1px solid var(--border-strong)', borderRadius: 14, fontFamily: 'var(--font-mono)',
-                background: 'var(--surface)', outline: 'none', color: 'var(--ink)',
-              }}
-            />
-          </div>
-        </div>
+            {/* Jours de la semaine */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
+              {dayNames.map((d) => (
+                <div key={d} style={{ textAlign: 'center', fontSize: 11, color: 'var(--muted)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 0' }}>{d}</div>
+              ))}
+            </div>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={setToday} style={{ flex: 1 }}>
-            Aujourd'hui
-          </button>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={onClear} style={{ flex: 1 }}>
-            Effacer
-          </button>
-          <button type="button" className="btn btn--primary" onClick={handleConfirm} disabled={!selectedDate} style={{ flex: 1.5 }}>
-            Confirmer
-          </button>
-        </div>
+            {/* Grille des jours */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 22 }}>
+              {cells.map((c, i) => {
+                const isToday = sameDay(c.date, today);
+                const isSelected = sameDay(c.date, selectedDate);
+                return (
+                  <button
+                    key={i} type="button"
+                    onClick={() => c.current && setSelectedDate(c.date)}
+                    disabled={!c.current}
+                    style={{
+                      height: 40, border: isToday && !isSelected ? '1px solid var(--gold-deep)' : 'none',
+                      borderRadius: 999, cursor: c.current ? 'pointer' : 'default',
+                      background: isSelected ? 'var(--ink)' : 'transparent',
+                      color: isSelected ? '#F7F3EC' : !c.current ? 'var(--subtle)' : isToday ? 'var(--gold-deep)' : 'var(--ink)',
+                      fontWeight: isSelected || isToday ? 600 : 400, fontSize: 14,
+                      transition: 'background .15s, color .15s', fontFamily: 'inherit',
+                    }}
+                    onMouseEnter={(e) => { if (c.current && !isSelected) e.currentTarget.style.background = 'var(--bg-soft)'; }}
+                    onMouseLeave={(e) => { if (c.current && !isSelected) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {c.day}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={goToday} style={{ flex: 1 }}>
+                Aujourd'hui
+              </button>
+              <button type="button" className="btn btn--primary" disabled={!selectedDate} onClick={() => setStep('time')} style={{ flex: 2 }}>
+                Continuer →
+              </button>
+            </div>
+          </React.Fragment>
+        )}
+
+        {/* ── ÉTAPE 2 : Heure (tambour iPhone) ── */}
+        {step === 'time' && (
+          <React.Fragment>
+            <h3 className="display" style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', textAlign: 'center' }}>
+              Choisir l'heure
+            </h3>
+            <p className="muted" style={{ textAlign: 'center', margin: '0 0 24px', fontSize: 13 }}>
+              {selectedDate && selectedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+
+            {/* Tambours heure + minute */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 32 }}>
+              <DrumScroll count={24} value={hour} onChange={setHour} />
+              <span style={{ fontSize: 34, fontWeight: 700, color: 'var(--border-strong)', padding: '0 6px', marginTop: -4 }}>:</span>
+              <DrumScroll count={60} value={minute} onChange={setMinute} />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setStep('calendar')} style={{ flex: 1 }}>
+                ← Retour
+              </button>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={onClear} style={{ flex: 1 }}>
+                Effacer
+              </button>
+              <button type="button" className="btn btn--primary" onClick={handleConfirm} style={{ flex: 1.5 }}>
+                Confirmer
+              </button>
+            </div>
+          </React.Fragment>
+        )}
+
       </div>
     </Modal>
   );
