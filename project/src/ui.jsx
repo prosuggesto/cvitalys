@@ -374,7 +374,7 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onComplete }
     const onEnded = () => {
       setPlaying(false);
       setCurrentTime(0);
-      if (onComplete) onComplete();
+      if (onComplete) onComplete(Math.floor(a.duration || 0));
     };
 
     a.addEventListener('timeupdate', onTime);

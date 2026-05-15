@@ -269,7 +269,12 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
               src={cv.audio_url}
               label={t("public.audioLabel")}
               onPlay={() => shortCode && api.incrementStat(shortCode, 'audio_demarre')}
-              onComplete={() => shortCode && api.incrementStat(shortCode, 'audio_complet')}
+              onComplete={(dur) => {
+                if (shortCode) {
+                  api.incrementStat(shortCode, 'audio_complet');
+                  if (dur > 0) api.incrementStat(shortCode, 'temps_audio', dur);
+                }
+              }}
             />
           </div>
         )}
@@ -346,13 +351,17 @@ const PublicPage = ({ shortCode, navigate }) => {
       })
       .catch(() => setLoading(false));
 
-    // Tracker le temps passé sur la page
-    const handleUnload = () => {
-      const secondes = Math.round((Date.now() - startTimeRef.current) / 1000);
-      if (secondes > 2) api.incrementStat(shortCode, 'temps_page', secondes);
+    // Tracker le temps passé sur la page via visibilitychange (fiable sur mobile iOS/Android)
+    // beforeunload ne se déclenche pas sur mobile → remplacé par visibilitychange
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        const secondes = Math.round((Date.now() - startTimeRef.current) / 1000);
+        if (secondes > 2) api.incrementStat(shortCode, 'temps_page', secondes);
+        startTimeRef.current = Date.now(); // reset si l'utilisateur revient
+      }
     };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => window.removeEventListener('beforeunload', handleUnload);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [shortCode]);
 
   if (loading) {
