@@ -15,7 +15,7 @@ function normalizeCv(row) {
   return {
     id: String(row.id),
     dbId: row.id,
-    short_code: row.short_code,
+    short_code: row.jeton_public,
     name: row.nom_cv,
     role: (row.postes && row.postes.nom) ? row.postes.nom : '',
     sector: (row.secteurs && row.secteurs.nom) ? row.secteurs.nom : '',
@@ -215,7 +215,7 @@ const api = {
     return sb
       .from('cvs')
       .select('*, postes(nom), secteurs(nom), profils(prenom, nom, email, telephone)')
-      .eq('short_code', shortCode)
+      .eq('jeton_public', shortCode)
       .eq('est_public', true)
       .single()
       .then(({ data, error }) => {
@@ -270,7 +270,7 @@ const api = {
   incrementStat(shortCode, type, secondes) {
     return sb
       .rpc('incrementer_stat_cv', {
-        p_short_code: shortCode,
+        p_jeton_public: shortCode,
         p_type_stat: type,
         p_secondes: secondes || 0,
       })
@@ -282,7 +282,7 @@ const api = {
   getStatsForUser(userId) {
     return sb
       .from('cvs')
-      .select('nom_cv, stat_scans, stat_audio_demarrages, stat_audio_completes, stat_clics_voir_cv, stat_clics_echange, stat_clics_retour, stat_clics_email, stat_clics_whatsapp, stat_clics_linkedin, stat_clics_instagram, stat_clics_site_web, stat_temps_moyen_page_secondes')
+      .select('nom_cv, stat_scans, stat_audio_demarrages, stat_audio_completes, stat_clic_voir_cv, stat_clic_echange, stat_clic_retour, stat_clic_email, stat_clic_whatsapp, stat_clic_linkedin, stat_clic_instagram, stat_clic_site_web, stat_temps_moyen_page_secondes')
       .eq('utilisateur_id', userId)
       .then(({ data, error }) => {
         if (error) throw error;
@@ -295,7 +295,7 @@ const api = {
   getNfcCards(userId) {
     return sb
       .from('nfc_cv')
-      .select('*, cvs(short_code, nom_cv)')
+      .select('*, cvs(jeton_public, nom_cv)')
       .eq('utilisateur_id', userId)
       .order('cree_le', { ascending: false })
       .then(({ data, error }) => {
@@ -308,7 +308,7 @@ const api = {
     return sb
       .from('nfc_cv')
       .insert({ utilisateur_id: userId, cv_id: cvId, actif: true })
-      .select('*, cvs(short_code, nom_cv)')
+      .select('*, cvs(jeton_public, nom_cv)')
       .single()
       .then(({ data, error }) => {
         if (error) throw error;
@@ -339,7 +339,7 @@ const api = {
   getNfcByCode(codeCourtNfc) {
     return sb
       .from('nfc_cv')
-      .select('*, cvs(short_code)')
+      .select('*, cvs(jeton_public)')
       .eq('code_court', codeCourtNfc)
       .eq('actif', true)
       .single()

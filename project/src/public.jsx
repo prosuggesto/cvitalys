@@ -376,8 +376,8 @@ const PublicPage = ({ shortCode, navigate }) => {
 const NfcRedirect = ({ code, navigate }) => {
   useEffect(() => {
     api.getNfcByCode(code).then((nfc) => {
-      if (nfc && nfc.cvs && nfc.cvs.short_code) {
-        navigate('/cv/' + nfc.cvs.short_code);
+      if (nfc && nfc.cvs && nfc.cvs.jeton_public) {
+        navigate('/cv/' + nfc.cvs.jeton_public);
       } else {
         navigate('/');
       }
