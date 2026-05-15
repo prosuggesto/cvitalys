@@ -9,18 +9,21 @@ const SecondaryContactBtn = ({ icon, brand, label, onClick }) => {
 };
 
 const ExchangeModal = ({ open, onClose, cv, user, toast }) => {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [f, setF] = useState({ company: "", recruiter: "", note: "", date: "" });
   useEffect(() => {if (open) setF({ company: "", recruiter: "", note: "", date: "" });}, [open]);
   const submit = (e) => {
     e.preventDefault();
     if (cv && cv.short_code) api.incrementStat(cv.short_code, 'clic_echange');
     const dateLabel = f.date ? fmtDateTimeFr(f.date) : "—";
-    const subject = encodeURIComponent(`Demande d'échange — CV de ${user.firstName} ${user.lastName}`);
-    const body = encodeURIComponent(
-      `Bonjour ${user.firstName},\n\nNous avons consulté votre CV digital et souhaitons échanger avec vous.\n\nEntreprise : ${f.company || "—"}\nRecruteur : ${f.recruiter || "—"}\nDate et heure souhaitées : ${dateLabel}\nCommentaire : ${f.note || "—"}\n\nCordialement.`
-    );
-    window.open(`mailto:${user.email}?subject=${subject}&body=${body}`, "_blank");
+    const isEs = lang === 'es';
+    const subject = encodeURIComponent(isEs
+      ? `Solicitud de contacto — CV de ${user.firstName} ${user.lastName}`
+      : `Demande d'échange — CV de ${user.firstName} ${user.lastName}`);
+    const body = encodeURIComponent(isEs
+      ? `Hola ${user.firstName},\n\nHemos consultado tu CV digital y nos gustaría hablar contigo.\n\nEmpresa: ${f.company || "—"}\nReclutador: ${f.recruiter || "—"}\nFecha y hora deseadas: ${dateLabel}\nComentario: ${f.note || "—"}\n\nAtentamente.`
+      : `Bonjour ${user.firstName},\n\nNous avons consulté votre CV digital et souhaitons échanger avec vous.\n\nEntreprise : ${f.company || "—"}\nRecruteur : ${f.recruiter || "—"}\nDate et heure souhaitées : ${dateLabel}\nCommentaire : ${f.note || "—"}\n\nCordialement.`);
+    window.location.href = `mailto:${user.email}?subject=${subject}&body=${body}`;
     toast(t("public.mailOpened"));
     onClose();
   };
@@ -46,17 +49,20 @@ const ExchangeModal = ({ open, onClose, cv, user, toast }) => {
 };
 
 const FeedbackModal = ({ open, onClose, cv, user, toast }) => {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [f, setF] = useState({ company: "", recruiter: "", note: "" });
   useEffect(() => {if (open) setF({ company: "", recruiter: "", note: "" });}, [open]);
   const submit = (e) => {
     e.preventDefault();
     if (cv && cv.short_code) api.incrementStat(cv.short_code, 'clic_retour');
-    const subject = encodeURIComponent(`Retour recruteur — CV de ${user.firstName} ${user.lastName}`);
-    const body = encodeURIComponent(
-      `Bonjour ${user.firstName},\n\nNous avons consulté votre CV digital et souhaitons vous faire un retour.\n\nEntreprise : ${f.company || "—"}\nRecruteur : ${f.recruiter || "—"}\nCommentaire : ${f.note || "—"}\n\nCordialement.`
-    );
-    window.open(`mailto:${user.email}?subject=${subject}&body=${body}`, "_blank");
+    const isEs = lang === 'es';
+    const subject = encodeURIComponent(isEs
+      ? `Comentario del reclutador — CV de ${user.firstName} ${user.lastName}`
+      : `Retour recruteur — CV de ${user.firstName} ${user.lastName}`);
+    const body = encodeURIComponent(isEs
+      ? `Hola ${user.firstName},\n\nHemos consultado tu CV digital y queremos dejarte un comentario.\n\nEmpresa: ${f.company || "—"}\nReclutador: ${f.recruiter || "—"}\nComentario: ${f.note || "—"}\n\nAtentamente.`
+      : `Bonjour ${user.firstName},\n\nNous avons consulté votre CV digital et souhaitons vous faire un retour.\n\nEntreprise : ${f.company || "—"}\nRecruteur : ${f.recruiter || "—"}\nCommentaire : ${f.note || "—"}\n\nCordialement.`);
+    window.location.href = `mailto:${user.email}?subject=${subject}&body=${body}`;
     toast(t("public.mailOpened"));
     onClose();
   };
@@ -315,7 +321,7 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
 
 // Page publique chargée via shortCode depuis Supabase
 const PublicPage = ({ shortCode, navigate }) => {
-  const { t } = useT();
+  const { t, setLang } = useT();
   const [cvData, setCvData] = useState(null); // { cv, profil }
   const [loading, setLoading] = useState(true);
   const [exchange, setExchange] = useState(false);
@@ -323,6 +329,12 @@ const PublicPage = ({ shortCode, navigate }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const { Toast: T, show } = useToast();
   const startTimeRef = useRef(Date.now());
+
+  // Détection automatique de la langue du recruteur (navigateur)
+  useEffect(() => {
+    const bl = (navigator.language || navigator.userLanguage || 'fr').toLowerCase();
+    setLang(bl.startsWith('es') ? 'es' : 'fr');
+  }, []);
 
   useEffect(() => {
     if (!shortCode) { setLoading(false); return; }
