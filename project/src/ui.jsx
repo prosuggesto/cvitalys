@@ -605,55 +605,111 @@ const ImagePreview = ({ url, width = 300, float3d = false }) => {
 };
 
 // ---------------------------------------------------------------------------
-// ZoomableImage — image CV avec zoom au double-clic
-// • Double-clic 1x : zoom 2.5x centré sur le point cliqué
-// • Double-clic 2x : retour à la taille normale
-// • Cursor zoom-in / zoom-out indique l'état
+// ZoomableImage — zoom & pan style n8n / Voiceflow
+// • Ctrl/Cmd + molette → zoom centré sur le curseur (jusqu'à 8x)
+// • Clic + glisser → déplacement (pan) dans n'importe quelle direction
+// • Double-clic → réinitialise zoom + position
+// • Bouton "Réinitialiser" en bas-droit quand zoom > 1
 // ---------------------------------------------------------------------------
-const ZoomableImage = ({ src, alt = 'CV', maxHeight = '82vh' }) => {
-  const [zoomed, setZoomed] = useState(false);
-  const [origin, setOrigin] = useState('50% 50%');
+const ZoomableImage = ({ src, alt = 'CV', maxHeight = '85vh' }) => {
+  const containerRef = useRef();
+  const lastMouseRef = useRef({ x: 0, y: 0 });
+  const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
 
-  const handleDoubleClick = (e) => {
-    if (zoomed) {
-      setZoomed(false);
-      setOrigin('50% 50%');
-    } else {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
-      setOrigin(`${x}% ${y}%`);
-      setZoomed(true);
-    }
+  const reset = () => setView({ scale: 1, x: 0, y: 0 });
+
+  useEffect(() => {
+    const c = containerRef.current;
+    if (!c) return;
+    const onWheel = (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      const rect = c.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const delta = -e.deltaY * 0.003;
+      setView((v) => {
+        const ns = Math.max(1, Math.min(8, v.scale * (1 + delta)));
+        if (ns === v.scale) return v;
+        // Zoom centré sur la position du curseur : on garde le même pixel sous la souris
+        return {
+          scale: ns,
+          x: mx - (mx - v.x) * (ns / v.scale),
+          y: my - (my - v.y) * (ns / v.scale),
+        };
+      });
+    };
+    c.addEventListener('wheel', onWheel, { passive: false });
+    return () => c.removeEventListener('wheel', onWheel);
+  }, []);
+
+  const onMouseDown = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    setIsPanning(true);
+    lastMouseRef.current = { x: e.clientX, y: e.clientY };
   };
 
+  const onMouseMove = (e) => {
+    if (!isPanning) return;
+    const dx = e.clientX - lastMouseRef.current.x;
+    const dy = e.clientY - lastMouseRef.current.y;
+    lastMouseRef.current = { x: e.clientX, y: e.clientY };
+    setView((v) => ({ ...v, x: v.x + dx, y: v.y + dy }));
+  };
+
+  const onMouseUp = () => setIsPanning(false);
+
   return (
-    <div
-      onDoubleClick={handleDoubleClick}
-      style={{
-        overflow: 'hidden',
-        borderRadius: 10,
-        boxShadow: 'var(--shadow-card)',
-        cursor: zoomed ? 'zoom-out' : 'zoom-in',
-        background: '#fff',
-        display: 'inline-block',
-        maxWidth: '100%',
-        userSelect: 'none',
-      }}
-    >
-      <img
-        src={src}
-        alt={alt}
-        draggable={false}
+    <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+      <div
+        ref={containerRef}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onDoubleClick={reset}
         style={{
-          display: 'block',
-          width: 'auto', height: 'auto',
-          maxWidth: '100%', maxHeight,
-          transformOrigin: origin,
-          transform: zoomed ? 'scale(2.5)' : 'scale(1)',
-          transition: 'transform 0.35s cubic-bezier(.2,.8,.2,1)',
+          overflow: 'hidden',
+          borderRadius: 10,
+          boxShadow: 'var(--shadow-card)',
+          cursor: isPanning ? 'grabbing' : (view.scale > 1 ? 'grab' : 'default'),
+          background: '#fff',
+          maxWidth: '100%',
+          userSelect: 'none',
         }}
-      />
+      >
+        <img
+          src={src}
+          alt={alt}
+          draggable={false}
+          style={{
+            display: 'block',
+            maxWidth: '100%', maxHeight,
+            transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
+            transformOrigin: '0 0',
+            transition: isPanning ? 'none' : 'transform 0.12s ease-out',
+            pointerEvents: 'none',
+          }}
+        />
+      </div>
+      {view.scale > 1 && (
+        <button
+          type="button"
+          onClick={reset}
+          style={{
+            position: 'absolute', bottom: 14, right: 14,
+            background: 'rgba(27,24,20,0.88)', color: '#F7F3EC',
+            border: 'none', borderRadius: 999, padding: '8px 16px',
+            fontSize: 12, cursor: 'pointer', zIndex: 5,
+            fontFamily: 'inherit', fontWeight: 500,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+          }}
+        >
+          Réinitialiser
+        </button>
+      )}
     </div>
   );
 };

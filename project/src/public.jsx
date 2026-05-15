@@ -380,17 +380,22 @@ const PublicPage = ({ shortCode, navigate }) => {
 
   return (
     <div data-no-chrome style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
-      {/* Header pleine largeur — Brand complètement à gauche, badge complètement à droite */}
-      <header style={{
-        width: '100%', display: 'flex', justifyContent: 'space-between',
-        alignItems: 'center', padding: '20px 32px', boxSizing: 'border-box',
-      }}>
-        <Brand size={14}/>
-        <span className="badge badge--green badge--dot">{t("public.scanned")}</span>
+      {/* Header — Brand + badge rapprochés (max-width centré) et plus grands */}
+      <header style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+        <div style={{
+          width: '100%', maxWidth: 1200, padding: '26px 48px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          boxSizing: 'border-box',
+        }}>
+          <Brand size={22}/>
+          <span className="badge badge--green badge--dot" style={{ fontSize: 14, padding: '7px 16px', letterSpacing: '0.02em' }}>
+            {t("public.scanned")}
+          </span>
+        </div>
       </header>
 
       {/* Contenu centré */}
-      <div className="public-shell" style={{ paddingTop: 8 }}>
+      <div className="public-shell" style={{ paddingTop: 0 }}>
         <PublicCVCard
           cv={cv}
           user={user}
@@ -404,12 +409,14 @@ const PublicPage = ({ shortCode, navigate }) => {
       <ExchangeModal open={exchange} onClose={() => setExchange(false)} cv={cv} user={user} toast={show} />
       <FeedbackModal open={feedback} onClose={() => setFeedback(false)} cv={cv} user={user} toast={show} />
 
-      {/* Modal "CV complet" — plus large + zoom au double-clic */}
-      <Modal open={viewerOpen} onClose={() => setViewerOpen(false)} width={1100}>
+      {/* Modal "CV complet" — XL avec zoom canvas-style */}
+      <Modal open={viewerOpen} onClose={() => setViewerOpen(false)} width={1500}>
         <div style={{ padding: 30 }}>
           <div className="eyebrow" style={{ marginBottom: 8 }}>{cv.name}</div>
           <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: "0 0 6px" }}>{t("public.cvComplete")}</h2>
-          <p className="muted" style={{ margin: "0 0 18px", fontSize: 13 }}>Double-cliquez sur une zone pour zoomer · double-cliquez à nouveau pour revenir</p>
+          <p className="muted" style={{ margin: "0 0 18px", fontSize: 13 }}>
+            <kbd style={{ padding: '2px 6px', background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11 }}>Ctrl</kbd> + molette pour zoomer · cliquer-glisser pour déplacer · double-clic pour réinitialiser
+          </p>
           <div style={{ display: "flex", justifyContent: "center" }}>
             {cv.cv_url
               ? <ZoomableImage src={cv.cv_url}/>

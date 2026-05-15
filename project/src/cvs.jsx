@@ -18,8 +18,10 @@ const CVCard = ({ cv, onPresent, onCustomize, onPreview, onDelete }) => {
         <button className="icon-btn icon-btn--danger" onClick={onDelete} title={t("common.delete")} style={{ color: "var(--red)" }}><I.X size={16}/></button>
       </div>
     </div>
-    <div style={{ display: "flex", justifyContent: "center", padding: "4px 0" }}>
-      {cv.cv_url ? <ImagePreview url={cv.cv_url} width={300}/> : <CVPreviewVisual cv={cv} scale={1}/>}
+    <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 18px" }}>
+      {cv.cv_url
+        ? <ImagePreview url={cv.cv_url} width={300} float3d={true}/>
+        : <CVPreviewVisual cv={cv} scale={1} float3d={true}/>}
     </div>
     <button className="btn btn--primary btn--block" onClick={onPresent}>
       <I.QR size={16}/> {t("cvs.present")}
