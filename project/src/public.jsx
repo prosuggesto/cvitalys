@@ -330,12 +330,6 @@ const PublicPage = ({ shortCode, navigate }) => {
   const { Toast: T, show } = useToast();
   const startTimeRef = useRef(Date.now());
 
-  // Détection automatique de la langue du recruteur (navigateur)
-  useEffect(() => {
-    const bl = (navigator.language || navigator.userLanguage || 'fr').toLowerCase();
-    setLang(bl.startsWith('es') ? 'es' : 'fr');
-  }, []);
-
   useEffect(() => {
     if (!shortCode) { setLoading(false); return; }
 
@@ -343,8 +337,12 @@ const PublicPage = ({ shortCode, navigate }) => {
       .then((data) => {
         setCvData(data);
         setLoading(false);
-        // Incrémenter le scan
-        if (data) api.incrementStat(shortCode, 'scan');
+        if (data) {
+          api.incrementStat(shortCode, 'scan');
+          // Langue de la page = langue choisie par le créateur du CV dans son profil
+          const profilLang = data.profil?.langue_interface;
+          setLang(profilLang === 'es' ? 'es' : 'fr');
+        }
       })
       .catch(() => setLoading(false));
 

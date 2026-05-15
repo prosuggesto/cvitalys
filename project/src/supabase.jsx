@@ -210,7 +210,7 @@ const api = {
   getCvByShortCode(shortCode) {
     return sb
       .from('cvs')
-      .select('*, postes(nom), secteurs(nom), profils(prenom, nom, email, telephone)')
+      .select('*, postes(nom), secteurs(nom), profils(prenom, nom, email, telephone, langue_interface)')
       .eq('jeton_public', shortCode)
       .eq('est_public', true)
       .single()
