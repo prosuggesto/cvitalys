@@ -331,7 +331,7 @@ const ComboboxField = ({ label, value, onChange, items = [], onCreate, placehold
 // • Fix WebM/Opus duration === Infinity via seek-hack
 // • Props optionnelles : label, onPlay, onComplete (stats tracking)
 // ---------------------------------------------------------------------------
-const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onComplete }) => {
+const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onStop }) => {
   const audioRef = useRef();
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -374,7 +374,8 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onComplete }
     const onEnded = () => {
       setPlaying(false);
       setCurrentTime(0);
-      if (onComplete) onComplete(Math.floor(a.duration || 0));
+      // Fin naturelle : envoie la durée totale comme un arrêt
+      if (onStop) onStop(Math.floor(a.duration || 0));
     };
 
     a.addEventListener('timeupdate', onTime);
@@ -393,8 +394,12 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onComplete }
   const toggle = () => {
     const a = audioRef.current;
     if (!a) return;
-    if (playing) { a.pause(); setPlaying(false); }
-    else {
+    if (playing) {
+      a.pause();
+      setPlaying(false);
+      // Envoie le temps écouté jusqu'au moment de la pause
+      if (onStop) onStop(Math.floor(a.currentTime || 0));
+    } else {
       a.play().then(() => {
         setPlaying(true);
         if (!playedRef.current && onPlay) { onPlay(); playedRef.current = true; }

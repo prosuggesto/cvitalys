@@ -269,12 +269,7 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
               src={cv.audio_url}
               label={t("public.audioLabel")}
               onPlay={() => shortCode && api.incrementStat(shortCode, 'audio_demarre')}
-              onComplete={(dur) => {
-                if (shortCode) {
-                  api.incrementStat(shortCode, 'audio_complet');
-                  if (dur > 0) api.incrementStat(shortCode, 'temps_audio', dur);
-                }
-              }}
+              onStop={(secs) => shortCode && secs > 0 && api.incrementStat(shortCode, 'audio_arret', secs)}
             />
           </div>
         )}

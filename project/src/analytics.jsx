@@ -55,7 +55,7 @@ const Analytics = ({ cvs }) => {
   const sum = (key) => cvs.reduce((acc, cv) => acc + (cv.stats?.[key] || 0), 0);
   const totalScans = sum('scans');
   const totalAudioDem = sum('audioDemarrages');
-  const totalAudioComp = sum('audioCompletes');
+  const totalAudioArrets = sum('audioArrets');
   const totalClicRetour = sum('clicRetour');
 
   const avgTime = cvs.length > 0
@@ -70,9 +70,11 @@ const Analytics = ({ cvs }) => {
     ? ((totalClicRetour / totalScans) * 100).toFixed(1) + '%'
     : '—';
 
-  // Taux de complétion audio (réutilisé dans la carte "Engagement audio")
-  const audioRate = totalAudioDem > 0
-    ? ((totalAudioComp / totalAudioDem) * 100).toFixed(1) + '%'
+  // Temps moyen d'écoute audio (calculé depuis les stats individuelles de chaque CV)
+  const totalTempsAudio = cvs.reduce((acc, cv) => acc + (cv.stats?.totalTempsAudio || 0), 0);
+  const avgAudioSec = totalAudioArrets > 0 ? Math.round(totalTempsAudio / totalAudioArrets) : 0;
+  const avgAudioFmt = avgAudioSec > 0
+    ? `${Math.floor(avgAudioSec / 60)}:${String(avgAudioSec % 60).padStart(2, '0')}`
     : '—';
 
   // Top CV
@@ -104,8 +106,8 @@ const Analytics = ({ cvs }) => {
 
   const engagement = [
     { label: t("analytics.engagement.launched"), value: totalAudioDem },
-    { label: t("analytics.engagement.complete"), value: totalAudioComp },
-    { label: t("analytics.engagement.rate"), value: audioRate },
+    { label: t("analytics.engagement.stopped"), value: totalAudioArrets },
+    { label: t("analytics.engagement.avgTime"), value: avgAudioFmt },
   ];
 
   // Clics réels par canal (depuis cv.stats.click*)
@@ -180,10 +182,10 @@ const Analytics = ({ cvs }) => {
             <div className="eyebrow" style={{ color: "rgba(247,243,236,0.5)", marginBottom: 6 }}>{t("analytics.audioEngagement")}</div>
             <div className="row gap-24" style={{ alignItems: "flex-end", marginTop: 4 }}>
               <div>
-                <div className="display" style={{ fontSize: 36, fontWeight: 500, color: "#F7F3EC" }}>{audioRate}</div>
-                <div style={{ fontSize: 12, color: "rgba(247,243,236,0.6)" }}>{t("analytics.fullListens")}</div>
+                <div className="display" style={{ fontSize: 36, fontWeight: 500, color: "#F7F3EC" }}>{avgAudioFmt}</div>
+                <div style={{ fontSize: 12, color: "rgba(247,243,236,0.6)" }}>{t("analytics.avgAudioTime")}</div>
               </div>
-              <div style={{ fontSize: 12, color: "var(--gold-soft)" }}>{t("analytics.listensOf", { a: totalAudioComp, b: totalAudioDem })}</div>
+              <div style={{ fontSize: 12, color: "var(--gold-soft)" }}>{t("analytics.listensOf", { a: totalAudioArrets, b: totalAudioDem })}</div>
             </div>
           </div>
         </div>
