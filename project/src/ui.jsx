@@ -545,9 +545,9 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
 
 // ---------------------------------------------------------------------------
 // imageToWebP — convertit une image (JPEG/PNG/WebP) en Blob WebP compressé
-// Qualité haute (95%) + max 2400px pour garder une image très nette.
+// Qualité très haute (96%) + max 2800px pour une image super nette.
 // ---------------------------------------------------------------------------
-function imageToWebP(file, maxWidth = 2400, quality = 0.95) {
+function imageToWebP(file, maxWidth = 2800, quality = 0.96) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -572,22 +572,35 @@ function imageToWebP(file, maxWidth = 2400, quality = 0.95) {
 }
 
 // ---------------------------------------------------------------------------
-// ImagePreview — affiche une image CV (WebP) avec ratio A4, optionnellement 3D
+// ImagePreview — affiche le CV à son ratio naturel (pas de crop)
+// • Pas de objectFit: cover → image rendue pixel-perfect, jamais coupée
+// • Effet 3D doux (rotation légère) + animation flottante → reste net
+// • box-shadow au lieu de filter:drop-shadow → meilleure netteté GPU
 // ---------------------------------------------------------------------------
 const ImagePreview = ({ url, width = 300, float3d = false }) => {
-  const H = Math.round(width * 1.414); // ratio A4
   if (!url) return null;
   const card = (
     <div style={{
-      width, height: H, borderRadius: 8, overflow: 'hidden', background: '#fff',
-      boxShadow: '0 2px 12px rgba(27,24,20,0.10), 0 1px 3px rgba(27,24,20,0.06)',
-      position: 'relative', flexShrink: 0,
+      width, borderRadius: 10, overflow: 'hidden', background: '#fff',
+      boxShadow: float3d
+        ? '0 30px 60px -15px rgba(27,24,20,0.22), 0 8px 18px -6px rgba(27,24,20,0.10)'
+        : '0 2px 12px rgba(27,24,20,0.10), 0 1px 3px rgba(27,24,20,0.06)',
+      flexShrink: 0, lineHeight: 0,
     }}>
-      <img src={url} alt="CV" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}/>
+      <img src={url} alt="CV" style={{ width: '100%', height: 'auto', display: 'block' }}/>
     </div>
   );
-  if (float3d) return <div className="cv-3d"><div>{card}</div></div>;
-  return card;
+
+  if (!float3d) return card;
+
+  // Effet 3D léger : rotation douce + animation flottante (cf .cv-float dans styles.css)
+  return (
+    <div style={{ animation: 'cv-float 6s ease-in-out infinite', display: 'inline-block', perspective: '1400px' }}>
+      <div style={{ transform: 'rotateX(2deg) rotateY(-4deg)', transformStyle: 'preserve-3d', transition: 'transform .8s cubic-bezier(.2,.8,.2,1)' }}>
+        {card}
+      </div>
+    </div>
+  );
 };
 
 Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder, ImagePreview, imageToWebP });

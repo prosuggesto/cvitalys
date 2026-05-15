@@ -14,7 +14,7 @@ const CustomizeSelectCard = ({ cv, onClick }) => {
       <span className="badge">{cv.role}</span>
     </div>
     <div style={{ display: "flex", justifyContent: "center" }}>
-      <CVPreviewVisual cv={cv} scale={1.1} />
+      {cv.cv_url ? <ImagePreview url={cv.cv_url} width={260}/> : <CVPreviewVisual cv={cv} scale={1.1} />}
     </div>
     <div className="between">
       <span className="muted" style={{ fontSize: 13 }}>{t("custom.select.click")}</span>

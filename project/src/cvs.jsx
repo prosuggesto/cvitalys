@@ -61,7 +61,7 @@ const PresentModal = ({ cv, open, onClose, onCopy }) => {
     <Modal open={open} onClose={onClose} width={920}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
         <div style={{ padding: 48, background: "var(--bg-soft)", borderRadius: "22px 0 0 22px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <CVPreviewVisual cv={cv} scale={1.05}/>
+          {cv.cv_url ? <ImagePreview url={cv.cv_url} width={300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={1.05}/>}
         </div>
         <div style={{ padding: "56px 48px 48px" }}>
           <div className="eyebrow">{t("cvs.modal.present.eyebrow")}</div>

@@ -198,86 +198,118 @@ const ContactRow = ({ icon, label, value }) => {
 const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, shortCode }) => {
   const { t } = useT();
   if (!cv) return null;
-  return (
-    <div className="public-card" style={{ padding: compact ? 20 : 24 }}>
-      <div className="between" style={{ marginBottom: 14 }}>
-        <Brand size={14} />
-        <span className="badge badge--green badge--dot">{t("public.scanned")}</span>
+
+  // Compact = miniature pour la landing : tout dans une seule carte (ancien layout)
+  if (compact) {
+    return (
+      <div className="public-card" style={{ padding: 20 }}>
+        <div className="between" style={{ marginBottom: 14 }}>
+          <Brand size={14} />
+          <span className="badge badge--green badge--dot">{t("public.scanned")}</span>
+        </div>
+        <div style={{ position: "relative", display: "flex", justifyContent: "center", padding: "8px 0" }}>
+          {cv.cv_url
+            ? <ImagePreview url={cv.cv_url} width={260} float3d={true}/>
+            : <CVPreviewVisual cv={cv} scale={1.15} float3d={true} />
+          }
+        </div>
+        <div style={{ marginTop: 14, textAlign: "center" }}>
+          <h2 className="display" style={{ fontSize: 22, fontWeight: 500, margin: 0 }}>{user.firstName} {user.lastName}</h2>
+          <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{cv.role} · {cv.sector}</div>
+        </div>
       </div>
-      <div style={{ position: "relative", display: "flex", justifyContent: "center", padding: compact ? "8px 0" : "16px 4px" }}>
+    );
+  }
+
+  // Full public page : header en haut + CV flottant au-dessus + carte d'infos en bas
+  return (
+    <React.Fragment>
+      {/* Header — Brand à gauche, badge CV scanné à droite */}
+      <header style={{ width: '100%', maxWidth: 460, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, padding: '0 4px' }}>
+        <Brand size={14}/>
+        <span className="badge badge--green badge--dot">{t("public.scanned")}</span>
+      </header>
+
+      {/* CV flottant 3D au-dessus de la carte */}
+      <div style={{ position: "relative", margin: '4px 0 28px', display: 'flex', justifyContent: 'center' }}>
         {cv.cv_url
-          ? <ImagePreview url={cv.cv_url} width={compact ? 260 : 300} float3d={true}/>
-          : <CVPreviewVisual cv={cv} scale={compact ? 1.15 : 1.35} float3d={true} />
+          ? <ImagePreview url={cv.cv_url} width={280} float3d={true}/>
+          : <CVPreviewVisual cv={cv} scale={1.35} float3d={true} />
         }
         {onViewCv &&
-        <button className="btn btn--secondary btn--sm" style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.95)", boxShadow: "var(--shadow-card)", zIndex: 2 }} onClick={onViewCv}>
+          <button className="btn btn--secondary btn--sm" style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.95)", boxShadow: "var(--shadow-card)", zIndex: 2 }} onClick={onViewCv}>
             <I.Eye size={14} /> {t("public.viewCv")}
           </button>
         }
       </div>
 
-      {/* Audio player — composant unifié */}
-      <div style={{ marginTop: 16 }}>
-        {cv.audio_url
-          ? <AudioPlayerCustom
+      {/* Carte blanche avec toutes les infos */}
+      <div className="public-card" style={{ padding: 24 }}>
+        {/* Nom + rôle */}
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <div className="eyebrow" style={{ marginBottom: 6 }}>{t("public.candidate")}</div>
+          <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: 0 }}>{user.firstName} {user.lastName}</h2>
+          <div className="row gap-8" style={{ marginTop: 8, justifyContent: 'center' }}>
+            <span className="badge">{cv.role}</span>
+            {cv.sector && <span className="muted" style={{ fontSize: 13 }}>· {cv.sector}</span>}
+          </div>
+        </div>
+
+        {/* Audio — uniquement si un vocal a été uploadé */}
+        {cv.audio_url && (
+          <div style={{ marginTop: 18 }}>
+            <AudioPlayerCustom
               src={cv.audio_url}
               label={t("public.audioLabel")}
               onPlay={() => shortCode && api.incrementStat(shortCode, 'audio_demarre')}
               onComplete={() => shortCode && api.incrementStat(shortCode, 'audio_complet')}
             />
-          : <SimulatedAudioPlayer duration={cv.audio?.duration || "1:08"}/>
-        }
-      </div>
-
-      <div style={{ marginTop: 18, padding: "16px 4px", borderTop: "1px solid var(--border-soft)" }}>
-        <div className="eyebrow" style={{ marginBottom: 6 }}>{t("public.candidate")}</div>
-        <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: 0 }}>{user.firstName} {user.lastName}</h2>
-        <div className="row gap-8" style={{ marginTop: 6 }}>
-          <span className="badge">{cv.role}</span>
-          <span className="muted" style={{ fontSize: 13 }}>· {cv.sector}</span>
-        </div>
-      </div>
-
-      {/* Primary CTAs */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
-        {cv.buttons.exchange &&
-        <button className="btn btn--primary btn--lg btn--block" onClick={onExchange}>
-            <I.ThumbsUp size={16} /> {t("public.exchange.title")}
-          </button>
-        }
-        {cv.buttons.feedback &&
-        <button className="btn btn--secondary btn--lg btn--block" onClick={onFeedback}>
-            <I.Feedback size={16} /> {t("public.feedback.title")}
-          </button>
-        }
-      </div>
-
-      {/* Secondary contacts */}
-      {(cv.buttons.whatsapp || cv.buttons.email || cv.buttons.linkedin || cv.buttons.instagram || cv.buttons.website) &&
-      <div style={{ marginTop: 18 }}>
-          <div className="eyebrow" style={{ textAlign: "center", marginBottom: 12 }}>{t("public.otherChannels")}</div>
-          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-            {cv.buttons.whatsapp && <SecondaryContactBtn brand="whatsapp" label="WhatsApp" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_whatsapp'); const wa = (cv.contact.whatsapp || user.phone || '').replace(/\D/g, ''); window.open(`https://wa.me/${wa}`); }} />}
-            {cv.buttons.email && <SecondaryContactBtn brand="gmail" label="Email" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_email'); window.open(`mailto:${cv.contact.email || user.email}`); }} />}
-            {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_linkedin'); window.open('https://' + cv.contact.linkedin); }} />}
-            {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_instagram'); window.open('https://instagram.com/' + (cv.contact.instagram || '').replace('@', '')); }} />}
-            {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_site_web'); window.open(cv.contact.website); }} />}
           </div>
-        </div>
-      }
+        )}
 
-      {/* Contact details */}
-      {!compact && (user.phone || user.email) &&
-      <div style={{ marginTop: 22, padding: "12px 0", borderTop: "1px solid var(--border-soft)" }}>
-          {user.phone && <ContactRow icon="Phone" label={t("common.phone")} value={user.phone} />}
-          {user.email && <ContactRow icon="Mail" label={t("common.email")} value={user.email} />}
-        </div>
-      }
+        {/* CTAs principaux */}
+        {(cv.buttons.exchange || cv.buttons.feedback) && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18 }}>
+            {cv.buttons.exchange &&
+              <button className="btn btn--primary btn--lg btn--block" onClick={onExchange}>
+                <I.ThumbsUp size={16} /> {t("public.exchange.title")}
+              </button>
+            }
+            {cv.buttons.feedback &&
+              <button className="btn btn--secondary btn--lg btn--block" onClick={onFeedback}>
+                <I.Feedback size={16} /> {t("public.feedback.title")}
+              </button>
+            }
+          </div>
+        )}
 
-      <div style={{ marginTop: 14, textAlign: "center", fontSize: 11, color: "var(--subtle)" }}>
-        <a className="link-underline" href="#/" style={{ color: "var(--subtle)" }}>{t("common.poweredBy")}</a>
+        {/* Contacts secondaires */}
+        {(cv.buttons.whatsapp || cv.buttons.email || cv.buttons.linkedin || cv.buttons.instagram || cv.buttons.website) &&
+          <div style={{ marginTop: 18 }}>
+            <div className="eyebrow" style={{ textAlign: "center", marginBottom: 12 }}>{t("public.otherChannels")}</div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+              {cv.buttons.whatsapp && <SecondaryContactBtn brand="whatsapp" label="WhatsApp" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_whatsapp'); const wa = (cv.contact.whatsapp || user.phone || '').replace(/\D/g, ''); window.open(`https://wa.me/${wa}`); }} />}
+              {cv.buttons.email && <SecondaryContactBtn brand="gmail" label="Email" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_email'); window.open(`mailto:${cv.contact.email || user.email}`); }} />}
+              {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_linkedin'); window.open('https://' + cv.contact.linkedin); }} />}
+              {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_instagram'); window.open('https://instagram.com/' + (cv.contact.instagram || '').replace('@', '')); }} />}
+              {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_site_web'); window.open(cv.contact.website); }} />}
+            </div>
+          </div>
+        }
+
+        {/* Coordonnées (téléphone, email) */}
+        {(user.phone || user.email) &&
+          <div style={{ marginTop: 22, padding: "12px 0", borderTop: "1px solid var(--border-soft)" }}>
+            {user.phone && <ContactRow icon="Phone" label={t("common.phone")} value={user.phone} />}
+            {user.email && <ContactRow icon="Mail" label={t("common.email")} value={user.email} />}
+          </div>
+        }
+
+        <div style={{ marginTop: 14, textAlign: "center", fontSize: 11, color: "var(--subtle)" }}>
+          <a className="link-underline" href="#/" style={{ color: "var(--subtle)" }}>{t("common.poweredBy")}</a>
+        </div>
       </div>
-    </div>);
+    </React.Fragment>);
 };
 
 // Page publique chargée via shortCode depuis Supabase
