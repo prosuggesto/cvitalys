@@ -822,13 +822,12 @@ const DateTimePickerModal = ({ value, onConfirm, onClear, onClose }) => {
   const prevLast = new Date(month.getFullYear(), month.getMonth(), 0).getDate();
 
   const cells = [];
-  for (let i = startDow - 1; i >= 0; i--)
-    cells.push({ day: prevLast - i, current: false, date: new Date(month.getFullYear(), month.getMonth() - 1, prevLast - i) });
+  // Cellules vides avant le 1er du mois
+  for (let i = 0; i < startDow; i++)
+    cells.push(null);
+  // Jours du mois uniquement
   for (let d = 1; d <= daysInMonth; d++)
     cells.push({ day: d, current: true, date: new Date(month.getFullYear(), month.getMonth(), d) });
-  let trailing = 1;
-  while (cells.length < 42)
-    cells.push({ day: trailing, current: false, date: new Date(month.getFullYear(), month.getMonth() + 1, trailing++) });
 
   const today = new Date();
   const sameDay = (a, b) => a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -881,23 +880,23 @@ const DateTimePickerModal = ({ value, onConfirm, onClear, onClose }) => {
             {/* Grille des jours */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 22 }}>
               {cells.map((c, i) => {
+                if (!c) return <div key={i} />;
                 const isToday = sameDay(c.date, today);
                 const isSelected = sameDay(c.date, selectedDate);
                 return (
                   <button
                     key={i} type="button"
-                    onClick={() => c.current && setSelectedDate(c.date)}
-                    disabled={!c.current}
+                    onClick={() => setSelectedDate(c.date)}
                     style={{
                       height: 40, border: isToday && !isSelected ? '1px solid var(--gold-deep)' : 'none',
-                      borderRadius: 999, cursor: c.current ? 'pointer' : 'default',
+                      borderRadius: 999, cursor: 'pointer',
                       background: isSelected ? 'var(--ink)' : 'transparent',
-                      color: isSelected ? '#F7F3EC' : !c.current ? 'var(--subtle)' : isToday ? 'var(--gold-deep)' : 'var(--ink)',
+                      color: isSelected ? '#F7F3EC' : isToday ? 'var(--gold-deep)' : 'var(--ink)',
                       fontWeight: isSelected || isToday ? 600 : 400, fontSize: 14,
                       transition: 'background .15s, color .15s', fontFamily: 'inherit',
                     }}
-                    onMouseEnter={(e) => { if (c.current && !isSelected) e.currentTarget.style.background = 'var(--bg-soft)'; }}
-                    onMouseLeave={(e) => { if (c.current && !isSelected) e.currentTarget.style.background = 'transparent'; }}
+                    onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-soft)'; }}
+                    onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
                   >
                     {c.day}
                   </button>
