@@ -259,10 +259,10 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
       }
 
       {/* Contact details */}
-      {!compact &&
+      {!compact && (user.phone || user.email) &&
       <div style={{ marginTop: 22, padding: "12px 0", borderTop: "1px solid var(--border-soft)" }}>
-          <ContactRow icon="Phone" label={t("common.phone")} value={cv.contact.phone} />
-          <ContactRow icon="Mail" label={t("common.email")} value={cv.contact.email} />
+          {user.phone && <ContactRow icon="Phone" label={t("common.phone")} value={user.phone} />}
+          {user.email && <ContactRow icon="Mail" label={t("common.email")} value={user.email} />}
         </div>
       }
 

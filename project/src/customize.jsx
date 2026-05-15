@@ -120,12 +120,9 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
       const userId = session.user.id;
       const cvId = local.dbId;
 
-      // Email et téléphone viennent du profil (pas de saisie manuelle)
+      // Email/téléphone/WhatsApp lus depuis profils à l'affichage — pas stockés dans cvs
       const dbUpdates = {
         nom_cv: local.name,
-        email_contact: profile?.email || local.contact.email || null,
-        telephone_contact: profile?.telephone || local.contact.phone || null,
-        numero_whatsapp: profile?.telephone || local.contact.whatsapp || null,
         linkedin_url: local.contact.linkedin || null,
         instagram_url: local.contact.instagram || null,
         site_web_url: local.contact.website || null,
