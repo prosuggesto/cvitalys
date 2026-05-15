@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/project/CVitalis.html" },
+    { "source": "/(.*)", "destination": "/project/$1" }
+  ]
+}
