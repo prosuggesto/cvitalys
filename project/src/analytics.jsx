@@ -49,7 +49,11 @@ const Analytics = ({ cvs }) => {
     setLoadingStats(true);
     api.getStatsGlobales(userId)
       .then(rows => { setStatsGlobales(rows); setLoadingStats(false); })
-      .catch(() => { setStatsGlobales(null); setLoadingStats(false); });
+      .catch((err) => {
+        console.warn('[Analytics] getStatsGlobales failed:', err);
+        setStatsGlobales(null);
+        setLoadingStats(false);
+      });
   }, [userId]);
 
   // Map nom de secteur → secteur_id (pour filtrer stats_globales)
@@ -79,47 +83,57 @@ const Analytics = ({ cvs }) => {
   };
 
   // ---- Données de travail (array d'objets stats à agréger) ----------------
+  // Retourne aussi un flag pour savoir si les données sont "filtrées temporellement"
   const getWorkingStats = () => {
     if (cvMode) {
-      // CV spécifique → ses stats depuis le tableau cvs (tout temps)
       const cv = cvs.find(c => c.id === applied.cvId);
-      return cv && cv.stats ? [cv.stats] : [];
+      return { rows: cv && cv.stats ? [cv.stats] : [], periodActive: false };
     }
 
-    // Mode global : utiliser stats_globales si disponibles
-    if (statsGlobales !== null) {
+    // Filtrer par secteur depuis cvs (toujours disponible, pas besoin de stats_globales)
+    const sectorFiltered = applied.sector
+      ? cvs.filter(cv => cv.sector === applied.sector)
+      : cvs;
+
+    // Si stats_globales chargées et non vides → filtre temporel + secteur possible
+    if (statsGlobales && statsGlobales.length > 0) {
       const monthSet = getMonthSet(applied.period);
       const secteurId = applied.sector ? sectorIdMap[applied.sector] : null;
 
-      const filtered = statsGlobales.filter(row => {
+      const rows = statsGlobales.filter(row => {
         const periodOk = monthSet.has(`${row.annee}-${row.mois}`);
         const sectorOk = !secteurId || row.secteur_id === secteurId;
         return periodOk && sectorOk;
       });
 
-      // Normaliser les colonnes stats_globales vers le même format que cv.stats
-      return filtered.map(row => ({
-        scans:            row.stat_scans || 0,
-        audioDemarrages:  row.stat_audio_demarrages || 0,
-        audioArrets:      row.stat_audio_arrets || 0,
-        totalTempsAudio:  row.stat_total_temps_audio_secondes || 0,
-        totalTempsPage:   row.stat_total_temps_page_secondes || 0,
-        clicRetour:       row.stat_clic_retour || 0,
-        clicEmail:        row.stat_clic_email || 0,
-        clicWhatsapp:     row.stat_clic_whatsapp || 0,
-        clicLinkedin:     row.stat_clic_linkedin || 0,
-        clicInstagram:    row.stat_clic_instagram || 0,
-        clicSiteWeb:      row.stat_clic_site_web || 0,
-        clicEchange:      row.stat_clic_echange || 0,
-        clicVoirCv:       row.stat_clic_voir_cv || 0,
-      }));
+      if (rows.length > 0) {
+        return {
+          periodActive: true,
+          rows: rows.map(row => ({
+            scans:           row.stat_scans || 0,
+            audioDemarrages: row.stat_audio_demarrages || 0,
+            audioArrets:     row.stat_audio_arrets || 0,
+            totalTempsAudio: row.stat_total_temps_audio_secondes || 0,
+            totalTempsPage:  row.stat_total_temps_page_secondes || 0,
+            clicRetour:      row.stat_clic_retour || 0,
+            clicEmail:       row.stat_clic_email || 0,
+            clicWhatsapp:    row.stat_clic_whatsapp || 0,
+            clicLinkedin:    row.stat_clic_linkedin || 0,
+            clicInstagram:   row.stat_clic_instagram || 0,
+            clicSiteWeb:     row.stat_clic_site_web || 0,
+            clicEchange:     row.stat_clic_echange || 0,
+            clicVoirCv:      row.stat_clic_voir_cv || 0,
+          })),
+        };
+      }
+      // Pas de lignes pour cette période → fallback cvs + secteur
     }
 
-    // Fallback : agréger depuis le tableau cvs (tout temps, tous les CV)
-    return cvs.map(cv => cv.stats || {});
+    // Fallback : cvs filtrés par secteur (stats all-time, pas de filtre temporel)
+    return { rows: sectorFiltered.map(cv => cv.stats || {}), periodActive: false };
   };
 
-  const workingStats = getWorkingStats();
+  const { rows: workingStats, periodActive } = getWorkingStats();
   const sumStat = (key) => workingStats.reduce((acc, s) => acc + (s[key] || 0), 0);
 
   const totalScans       = sumStat('scans');
@@ -129,15 +143,20 @@ const Analytics = ({ cvs }) => {
   const totalTempsAudio  = sumStat('totalTempsAudio');
   const totalTempsPage   = sumStat('totalTempsPage');
 
-  // Temps moyen page — si stats_globales a le total, on calcule; sinon on prend la moyenne des CV
+  // Temps moyen page
   let avgTime = 0;
   if (cvMode) {
     const cv = cvs.find(c => c.id === applied.cvId);
     avgTime = cv?.stats?.avgTime || 0;
-  } else if (statsGlobales !== null && totalTempsPage > 0 && totalScans > 0) {
+  } else if (periodActive && totalTempsPage > 0 && totalScans > 0) {
+    // stats_globales avec total → calcul exact
     avgTime = Math.round(totalTempsPage / totalScans);
-  } else if (!statsGlobales && cvs.length > 0) {
-    avgTime = Math.round(cvs.reduce((acc, cv) => acc + (cv.stats?.avgTime || 0), 0) / cvs.length);
+  } else {
+    // Fallback : moyenne des moyennes par CV (approximatif)
+    const validCvs = workingStats.filter(s => s.avgTime > 0);
+    if (validCvs.length > 0) {
+      avgTime = Math.round(validCvs.reduce((acc, s) => acc + (s.avgTime || 0), 0) / validCvs.length);
+    }
   }
 
   const avgTimeFmt = avgTime > 0
@@ -281,9 +300,19 @@ const Analytics = ({ cvs }) => {
 
       {/* Message d'info quand un CV spécifique est affiché */}
       {cvMode && (
-        <div style={{ marginBottom: 20, padding: "10px 16px", background: "var(--surface-2)", borderRadius: 10, fontSize: 13, color: "var(--muted)", border: "1px solid var(--border-soft)", display: "flex", alignItems: "center", gap: 8 }}>
-          <I.Info size={14} style={{ flexShrink: 0 }} />
+        <div style={{ marginBottom: 12, padding: "10px 16px", background: "var(--surface-2)", borderRadius: 10, fontSize: 13, color: "var(--muted)", border: "1px solid var(--border-soft)", display: "flex", alignItems: "center", gap: 8 }}>
+          <I.Info size={14} />
           {cvInfoMsg}
+        </div>
+      )}
+
+      {/* Avertissement quand le filtre temporel ne peut pas s'appliquer */}
+      {!cvMode && !periodActive && (
+        <div style={{ marginBottom: 12, padding: "10px 16px", background: "var(--surface-2)", borderRadius: 10, fontSize: 13, color: "var(--muted)", border: "1px solid var(--border-soft)", display: "flex", alignItems: "center", gap: 8 }}>
+          <I.Info size={14} />
+          {lang === 'es'
+            ? "Datos desde la creación — el filtro temporal se activará a medida que se registren nuevas visitas."
+            : "Données depuis la création — le filtre temporel s'activera au fur et à mesure des nouveaux scans."}
         </div>
       )}
 
