@@ -93,18 +93,13 @@ const Signup = ({ navigate }) => {
   const [f, setF] = useState({ firstName: "", lastName: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
-    if (!f.firstName || !f.lastName) {
-      setError("Prénom et nom sont requis.");
-      return;
-    }
-    if (f.password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères.");
-      return;
-    }
+    if (!f.firstName || !f.lastName) { setError("Prénom et nom sont requis."); return; }
+    if (f.password.length < 6) { setError("Le mot de passe doit contenir au moins 6 caractères."); return; }
     setLoading(true);
     api.signUp(f.email, f.password, f.firstName, f.lastName)
       .then(({ data, error: err }) => {
@@ -115,12 +110,38 @@ const Signup = ({ navigate }) => {
           } else {
             setError(err.message || "Une erreur est survenue. Réessayez.");
           }
-        } else {
-          // Supabase peut requérir confirmation email — on redirige quand même
+        } else if (data.session) {
+          // Email confirmation désactivée → session immédiate
           navigate("/app/cvs");
+        } else {
+          // Email confirmation activée → afficher message
+          setEmailSent(true);
         }
       });
   };
+
+  if (emailSent) {
+    return (
+      <AuthShell footer={null}>
+        <div className="eyebrow">{t("auth.eyebrowSignup")}</div>
+        <h1 className="display" style={{ fontSize: 44, margin: "12px 0 8px", fontWeight: 500 }}>
+          Vérifiez votre <em className="display-italic">email.</em>
+        </h1>
+        <p className="muted" style={{ marginBottom: 32 }}>
+          Un lien de confirmation a été envoyé à <strong>{f.email}</strong>. Cliquez dessus pour activer votre compte.
+        </p>
+        <div className="card" style={{ padding: 20 }}>
+          <div className="row gap-12">
+            <span className="check check--on"><I.Check size={12}/></span>
+            <span>Email envoyé — vérifiez votre boîte de réception.</span>
+          </div>
+        </div>
+        <button className="btn btn--secondary btn--lg" style={{ marginTop: 20 }} onClick={() => navigate("/auth/login")}>
+          ← Retour à la connexion
+        </button>
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell footer={

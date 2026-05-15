@@ -34,8 +34,21 @@ function AppInner() {
   const { t } = useT();
 
   // Charger le profil et les CVs après authentification
+  // Si le profil n'existe pas encore (trigger non installé), on le crée ici
   const loadUserData = (userId) => {
     return api.getProfile(userId)
+      .catch(() => {
+        // Profil absent → on le crée (fallback si le trigger DB n'est pas installé)
+        return sb.auth.getUser().then(({ data: { user } }) => {
+          const meta = user.user_metadata || {};
+          return sb.from('profils').upsert({
+            id: userId,
+            prenom: meta.prenom || meta.first_name || '',
+            nom: meta.nom || meta.last_name || '',
+            email: user.email || '',
+          }, { onConflict: 'id' }).then(() => api.getProfile(userId));
+        });
+      })
       .then((p) => {
         setProfile(p);
         window.MOCK.initialUser = {
@@ -95,10 +108,17 @@ function AppInner() {
   };
 
   const isApp = route.startsWith("/app");
+  const isAuthRoute = route.startsWith("/auth/");
   const isPublicRoute = route.startsWith("/cv/") || route.startsWith("/nfc/");
 
   // Écran de chargement pendant l'init
   if (loading) return <LoadingScreen/>;
+
+  // Si session active et sur une page auth → rediriger vers l'app
+  if (session && isAuthRoute) {
+    navigate("/app/cvs");
+    return null;
+  }
 
   // Protéger les routes /app/*
   if (isApp && !session) {
