@@ -87,14 +87,36 @@ const PresentModal = ({ cv, open, onClose, onCopy }) => {
 
 const AddCVModal = ({ open, onClose, onCreate, session }) => {
   const { t } = useT();
-  const [f, setF] = useState({ name: "", role: "", sector: "", file: null, audioBlob: null });
+  const [f, setF] = useState({ name: "", role: { id: null, nom: "" }, sector: { id: null, nom: "" }, file: null, audioBlob: null });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [postes, setPostes] = useState([]);
+  const [secteurs, setSecteurs] = useState([]);
 
   useEffect(() => {
-    if (open) setF({ name: "", role: "", sector: "", file: null, audioBlob: null });
-    setError("");
+    if (open) {
+      setF({ name: "", role: { id: null, nom: "" }, sector: { id: null, nom: "" }, file: null, audioBlob: null });
+      setError("");
+      if (session) {
+        api.getPostes(session.user.id).then(setPostes).catch(() => {});
+        api.getSecteurs(session.user.id).then(setSecteurs).catch(() => {});
+      }
+    }
   }, [open]);
+
+  const handleCreatePoste = (nom) =>
+    api.getOrCreatePoste(session.user.id, nom).then((id) => {
+      const item = { id, nom };
+      setPostes((prev) => [...prev, item]);
+      return item;
+    });
+
+  const handleCreateSecteur = (nom) =>
+    api.getOrCreateSecteur(session.user.id, nom).then((id) => {
+      const item = { id, nom };
+      setSecteurs((prev) => [...prev, item]);
+      return item;
+    });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -105,32 +127,24 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
 
     const userId = session.user.id;
 
-    // Créer poste et secteur en parallèle si nécessaire
-    Promise.all([
-      f.role ? api.getOrCreatePoste(userId, f.role) : Promise.resolve(null),
-      f.sector ? api.getOrCreateSecteur(userId, f.sector) : Promise.resolve(null),
-    ])
-      .then(([posteId, secteurId]) => {
-        return api.createCv(userId, {
-          nom_cv: f.name,
-          poste_id: posteId,
-          secteur_id: secteurId,
-        });
-      })
+    const resolvePoste = f.role.id
+      ? Promise.resolve(f.role.id)
+      : f.role.nom.trim() ? api.getOrCreatePoste(userId, f.role.nom) : Promise.resolve(null);
+
+    const resolveSecteur = f.sector.id
+      ? Promise.resolve(f.sector.id)
+      : f.sector.nom.trim() ? api.getOrCreateSecteur(userId, f.sector.nom) : Promise.resolve(null);
+
+    Promise.all([resolvePoste, resolveSecteur])
+      .then(([posteId, secteurId]) => api.createCv(userId, { nom_cv: f.name, poste_id: posteId, secteur_id: secteurId }))
       .then((newCv) => {
         const uploads = [];
         if (f.file) uploads.push(api.uploadCvFile(userId, newCv.dbId, f.file).then((url) => { newCv.cv_url = url; newCv.hasFile = true; }));
         if (f.audioBlob) uploads.push(api.uploadAudio(userId, newCv.dbId, f.audioBlob).then((url) => { newCv.audio_url = url; newCv.audio = { url }; }));
         return Promise.all(uploads).then(() => newCv);
       })
-      .then((newCv) => {
-        setSaving(false);
-        onCreate(newCv);
-      })
-      .catch((err) => {
-        setSaving(false);
-        setError(err.message || "Une erreur est survenue lors de la création du CV.");
-      });
+      .then((newCv) => { setSaving(false); onCreate(newCv); })
+      .catch((err) => { setSaving(false); setError(err.message || "Une erreur est survenue lors de la création du CV."); });
   };
 
   return (
@@ -142,8 +156,22 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Field label={t("common.cvName")}><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="ex. CV Hôtellerie" required/></Field>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <Field label={t("common.role")}><input className="input" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} placeholder="Réceptionniste"/></Field>
-            <Field label={t("common.sector")}><input className="input" value={f.sector} onChange={(e) => setF({ ...f, sector: e.target.value })} placeholder="Hôtellerie"/></Field>
+            <ComboboxField
+              label={t("common.role")}
+              value={f.role}
+              onChange={(item) => setF({ ...f, role: item })}
+              items={postes}
+              onCreate={handleCreatePoste}
+              placeholder="Réceptionniste"
+            />
+            <ComboboxField
+              label={t("common.sector")}
+              value={f.sector}
+              onChange={(item) => setF({ ...f, sector: item })}
+              items={secteurs}
+              onCreate={handleCreateSecteur}
+              placeholder="Hôtellerie"
+            />
           </div>
           <Field label={t("cvs.modal.add.cvFile")}>
             <label className="card-empty" style={{ padding: 18, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", justifyContent: "center" }}>

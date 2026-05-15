@@ -250,15 +250,163 @@ function useToast() {
 }
 
 // ---------------------------------------------------------------------------
+// ComboboxField — input with dropdown showing existing items + "Create" option
+// ---------------------------------------------------------------------------
+const ComboboxField = ({ label, value, onChange, items = [], onCreate, placeholder, hint }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value?.nom || '');
+  const [creating, setCreating] = useState(false);
+  const containerRef = useRef();
+
+  useEffect(() => { setQuery(value?.nom || ''); }, [value?.id]);
+
+  useEffect(() => {
+    const handle = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, []);
+
+  const filtered = query.trim()
+    ? items.filter((i) => i.nom.toLowerCase().includes(query.toLowerCase()))
+    : items;
+  const exactMatch = items.find((i) => i.nom.toLowerCase() === query.trim().toLowerCase());
+
+  const select = (item) => { onChange(item); setQuery(item.nom); setOpen(false); };
+
+  const handleCreate = () => {
+    if (!query.trim() || creating || !onCreate) return;
+    setCreating(true);
+    onCreate(query.trim())
+      .then((item) => { setCreating(false); select(item); })
+      .catch(() => setCreating(false));
+  };
+
+  return (
+    <Field label={label} hint={hint}>
+      <div ref={containerRef} style={{ position: 'relative' }}>
+        <input
+          className="input"
+          value={query}
+          placeholder={placeholder}
+          autoComplete="off"
+          onChange={(e) => { setQuery(e.target.value); onChange({ id: null, nom: e.target.value }); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+        />
+        {open && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+            zIndex: 200, background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: 10, boxShadow: 'var(--shadow-lift)', maxHeight: 200, overflowY: 'auto',
+          }}>
+            {filtered.length === 0 && !query.trim() && (
+              <div style={{ padding: '10px 12px', fontSize: 13, color: 'var(--muted)' }}>Tapez pour rechercher…</div>
+            )}
+            {filtered.map((item) => (
+              <div key={item.id} onMouseDown={() => select(item)} style={{
+                padding: '9px 12px', cursor: 'pointer', fontSize: 14,
+                borderBottom: '1px solid var(--border)',
+              }}>{item.nom}</div>
+            ))}
+            {query.trim() && !exactMatch && (
+              <div onMouseDown={handleCreate} style={{
+                padding: '9px 12px', cursor: 'pointer', fontSize: 14,
+                color: 'var(--gold-deep)', fontWeight: 500,
+                borderTop: filtered.length ? '1px solid var(--border)' : 'none',
+              }}>
+                {creating ? 'Création…' : `+ Créer "${query.trim()}"`}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Field>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// AudioPlayerCustom — custom player that handles WebM files (no duration meta)
+// ---------------------------------------------------------------------------
+const AudioPlayerCustom = ({ src, knownDuration = 0 }) => {
+  const audioRef = useRef();
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(knownDuration);
+
+  useEffect(() => { setCurrentTime(0); setPlaying(false); setDuration(knownDuration); }, [src, knownDuration]);
+
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    const onTime = () => setCurrentTime(a.currentTime);
+    const onMeta = () => { if (isFinite(a.duration) && a.duration > 0) setDuration(a.duration); };
+    const onEnded = () => { setPlaying(false); setCurrentTime(0); };
+    a.addEventListener('timeupdate', onTime);
+    a.addEventListener('loadedmetadata', onMeta);
+    a.addEventListener('durationchange', onMeta);
+    a.addEventListener('ended', onEnded);
+    return () => {
+      a.removeEventListener('timeupdate', onTime);
+      a.removeEventListener('loadedmetadata', onMeta);
+      a.removeEventListener('durationchange', onMeta);
+      a.removeEventListener('ended', onEnded);
+    };
+  }, [src]);
+
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) { a.pause(); setPlaying(false); }
+    else { a.play().then(() => setPlaying(true)).catch(() => {}); }
+  };
+
+  const seek = (e) => {
+    const a = audioRef.current;
+    if (!a || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const t = ((e.clientX - rect.left) / rect.width) * duration;
+    a.currentTime = t;
+    setCurrentTime(t);
+  };
+
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const pct = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--bg-soft)', borderRadius: 10, border: '1px solid var(--border)' }}>
+      <audio ref={audioRef} src={src} preload="metadata"/>
+      <button type="button" onClick={toggle} style={{
+        width: 34, height: 34, borderRadius: '50%', background: 'var(--ink)', color: '#fff',
+        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        {playing ? <I.Pause size={13}/> : <I.Play size={13}/>}
+      </button>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, cursor: 'pointer' }} onClick={seek}>
+          <div style={{ width: pct + '%', height: '100%', background: 'var(--gold-deep)', borderRadius: 2, transition: 'width 0.25s linear' }}/>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--muted)' }}>
+          <span>{fmt(currentTime)}</span>
+          <span>{fmt(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // AudioRecorder
 // ---------------------------------------------------------------------------
 const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [previewUrl, setPreviewUrl] = useState(existingUrl || null);
+  const [recordedDuration, setRecordedDuration] = useState(0);
   const mrRef = useRef(null);
   const timerRef = useRef(null);
   const chunksRef = useRef([]);
+  const elapsedRef = useRef(0);
   const MAX_SEC = 60;
 
   const stopRecording = () => {
@@ -270,24 +418,29 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
   const start = () => {
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then((stream) => {
-        const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+        const mr = new MediaRecorder(stream, { mimeType });
         chunksRef.current = [];
         mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
         mr.onstop = () => {
-          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          const blob = new Blob(chunksRef.current, { type: mimeType });
           const url = URL.createObjectURL(blob);
           setPreviewUrl(url);
+          setRecordedDuration(elapsedRef.current);
           onBlob && onBlob(blob);
           stream.getTracks().forEach((track) => track.stop());
         };
         mr.start(100);
         mrRef.current = mr;
+        elapsedRef.current = 0;
         setElapsed(0);
         setRecording(true);
         timerRef.current = setInterval(() => {
           setElapsed((s) => {
-            if (s + 1 >= MAX_SEC) { stopRecording(); return MAX_SEC; }
-            return s + 1;
+            const next = s + 1;
+            elapsedRef.current = next;
+            if (next >= MAX_SEC) { stopRecording(); return MAX_SEC; }
+            return next;
           });
         }, 1000);
       })
@@ -300,6 +453,7 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
 
   const remove = () => {
     setPreviewUrl(null);
+    setRecordedDuration(0);
     onRemove && onRemove();
   };
 
@@ -316,24 +470,24 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
               <div style={{ width: '100%', height: 4, background: 'var(--bg-soft)', borderRadius: 2 }}>
                 <div style={{ width: (elapsed / MAX_SEC * 100) + '%', height: '100%', background: 'var(--red, #ef4444)', borderRadius: 2, transition: 'width 1s linear' }}/>
               </div>
-              <button className="btn btn--danger btn--sm" onClick={stopRecording}>
+              <button className="btn btn--danger btn--sm" type="button" onClick={stopRecording}>
                 <I.X size={14}/> Arrêter
               </button>
             </div>
           ) : (
-            <button className="btn btn--secondary btn--sm" onClick={start}>
+            <button className="btn btn--secondary btn--sm" type="button" onClick={start}>
               <I.Mic size={14}/> Enregistrer (max 1 min)
             </button>
           )}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <audio src={previewUrl} controls style={{ width: '100%' }}/>
+          <AudioPlayerCustom src={previewUrl} knownDuration={recordedDuration}/>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn--secondary btn--sm" onClick={start}>
+            <button className="btn btn--secondary btn--sm" type="button" onClick={start}>
               <I.Mic size={14}/> Ré-enregistrer
             </button>
-            <button className="btn btn--ghost btn--sm" onClick={remove}>
+            <button className="btn btn--ghost btn--sm" type="button" onClick={remove}>
               <I.Trash size={14}/> Supprimer
             </button>
           </div>
@@ -344,4 +498,4 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
   );
 };
 
-Object.assign(window, { Modal, Toggle, Field, QRBlock, CVPreviewVisual, Toast, useToast, AudioRecorder });
+Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder });

@@ -338,6 +338,30 @@ const api = {
 
   // ---- POSTES / SECTEURS (lookup ou create) --------------------------------
 
+  getPostes(userId) {
+    return sb
+      .from('postes')
+      .select('id, nom')
+      .or(`utilisateur_id.eq.${userId},utilisateur_id.is.null`)
+      .order('nom')
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return data || [];
+      });
+  },
+
+  getSecteurs(userId) {
+    return sb
+      .from('secteurs')
+      .select('id, nom')
+      .or(`utilisateur_id.eq.${userId},utilisateur_id.is.null`)
+      .order('nom')
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return data || [];
+      });
+  },
+
   getOrCreatePoste(userId, nom) {
     if (!nom) return Promise.resolve(null);
     return sb
@@ -346,7 +370,7 @@ const api = {
       .or(`utilisateur_id.eq.${userId},utilisateur_id.is.null`)
       .ilike('nom', nom)
       .limit(1)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data) return data.id;
         return sb
@@ -369,7 +393,7 @@ const api = {
       .or(`utilisateur_id.eq.${userId},utilisateur_id.is.null`)
       .ilike('nom', nom)
       .limit(1)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data) return data.id;
         return sb
