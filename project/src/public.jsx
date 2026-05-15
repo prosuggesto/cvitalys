@@ -221,27 +221,25 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
     );
   }
 
-  // Full public page : header en haut + CV flottant au-dessus + carte d'infos en bas
+  // Full public page : CV flottant + bouton "Voir le CV" en dessous + carte d'infos
   return (
     <React.Fragment>
-      {/* Header — Brand à gauche, badge CV scanné à droite */}
-      <header style={{ width: '100%', maxWidth: 460, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, padding: '0 4px' }}>
-        <Brand size={14}/>
-        <span className="badge badge--green badge--dot">{t("public.scanned")}</span>
-      </header>
-
-      {/* CV flottant 3D au-dessus de la carte */}
-      <div style={{ position: "relative", margin: '4px 0 28px', display: 'flex', justifyContent: 'center' }}>
+      {/* CV flottant (le header est rendu en pleine largeur par PublicPage) */}
+      <div style={{ margin: '4px 0 16px', display: 'flex', justifyContent: 'center' }}>
         {cv.cv_url
-          ? <ImagePreview url={cv.cv_url} width={280} float3d={true}/>
+          ? <ImagePreview url={cv.cv_url} width={300} float3d={true}/>
           : <CVPreviewVisual cv={cv} scale={1.35} float3d={true} />
         }
-        {onViewCv &&
-          <button className="btn btn--secondary btn--sm" style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.95)", boxShadow: "var(--shadow-card)", zIndex: 2 }} onClick={onViewCv}>
+      </div>
+
+      {/* Bouton "Voir le CV" SOUS l'image (ne cache plus le contenu) */}
+      {onViewCv && (
+        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
+          <button className="btn btn--secondary btn--sm" onClick={onViewCv}>
             <I.Eye size={14} /> {t("public.viewCv")}
           </button>
-        }
-      </div>
+        </div>
+      )}
 
       {/* Carte blanche avec toutes les infos */}
       <div className="public-card" style={{ padding: 24 }}>
@@ -381,26 +379,40 @@ const PublicPage = ({ shortCode, navigate }) => {
   };
 
   return (
-    <div data-no-chrome className="public-shell">
-      <PublicCVCard
-        cv={cv}
-        user={user}
-        shortCode={shortCode}
-        onExchange={() => setExchange(true)}
-        onFeedback={() => setFeedback(true)}
-        onViewCv={handleViewCv}
-      />
+    <div data-no-chrome style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+      {/* Header pleine largeur — Brand complètement à gauche, badge complètement à droite */}
+      <header style={{
+        width: '100%', display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', padding: '20px 32px', boxSizing: 'border-box',
+      }}>
+        <Brand size={14}/>
+        <span className="badge badge--green badge--dot">{t("public.scanned")}</span>
+      </header>
+
+      {/* Contenu centré */}
+      <div className="public-shell" style={{ paddingTop: 8 }}>
+        <PublicCVCard
+          cv={cv}
+          user={user}
+          shortCode={shortCode}
+          onExchange={() => setExchange(true)}
+          onFeedback={() => setFeedback(true)}
+          onViewCv={handleViewCv}
+        />
+      </div>
 
       <ExchangeModal open={exchange} onClose={() => setExchange(false)} cv={cv} user={user} toast={show} />
       <FeedbackModal open={feedback} onClose={() => setFeedback(false)} cv={cv} user={user} toast={show} />
 
-      <Modal open={viewerOpen} onClose={() => setViewerOpen(false)} width={720}>
+      {/* Modal "CV complet" — plus large + zoom au double-clic */}
+      <Modal open={viewerOpen} onClose={() => setViewerOpen(false)} width={1100}>
         <div style={{ padding: 30 }}>
           <div className="eyebrow" style={{ marginBottom: 8 }}>{cv.name}</div>
-          <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: "0 0 16px" }}>{t("public.cvComplete")}</h2>
+          <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: "0 0 6px" }}>{t("public.cvComplete")}</h2>
+          <p className="muted" style={{ margin: "0 0 18px", fontSize: 13 }}>Double-cliquez sur une zone pour zoomer · double-cliquez à nouveau pour revenir</p>
           <div style={{ display: "flex", justifyContent: "center" }}>
             {cv.cv_url
-              ? <img src={cv.cv_url} alt="CV" style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: 10, boxShadow: 'var(--shadow-card)', display: 'block' }}/>
+              ? <ZoomableImage src={cv.cv_url}/>
               : <CVPreviewVisual cv={cv} scale={2.1} />
             }
           </div>

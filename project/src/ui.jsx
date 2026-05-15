@@ -544,10 +544,10 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
 };
 
 // ---------------------------------------------------------------------------
-// imageToWebP — convertit une image (JPEG/PNG/WebP) en Blob WebP compressé
-// Qualité très haute (96%) + max 2800px pour une image super nette.
+// imageToWebP — convertit une image (JPEG/PNG/WebP) en Blob WebP qualité 4K
+// Quality 97% + max 3200px + lissage HQ pour rendu ultra-net partout
 // ---------------------------------------------------------------------------
-function imageToWebP(file, maxWidth = 2800, quality = 0.96) {
+function imageToWebP(file, maxWidth = 3200, quality = 0.97) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -558,6 +558,9 @@ function imageToWebP(file, maxWidth = 2800, quality = 0.96) {
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext('2d');
+      // Lissage haute qualité (bicubique) pour préserver la netteté du texte
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -573,9 +576,9 @@ function imageToWebP(file, maxWidth = 2800, quality = 0.96) {
 
 // ---------------------------------------------------------------------------
 // ImagePreview — affiche le CV à son ratio naturel (pas de crop)
-// • Pas de objectFit: cover → image rendue pixel-perfect, jamais coupée
-// • Effet 3D doux (rotation légère) + animation flottante → reste net
-// • box-shadow au lieu de filter:drop-shadow → meilleure netteté GPU
+// • Pas de transform 3D → texte pixel-perfect (la rotation 3D causait le flou)
+// • Juste box-shadow + animation flottante (cv-float) pour l'effet premium
+// • Ratio naturel : la largeur est fixe, la hauteur s'adapte à l'image source
 // ---------------------------------------------------------------------------
 const ImagePreview = ({ url, width = 300, float3d = false }) => {
   if (!url) return null;
@@ -583,7 +586,7 @@ const ImagePreview = ({ url, width = 300, float3d = false }) => {
     <div style={{
       width, borderRadius: 10, overflow: 'hidden', background: '#fff',
       boxShadow: float3d
-        ? '0 30px 60px -15px rgba(27,24,20,0.22), 0 8px 18px -6px rgba(27,24,20,0.10)'
+        ? '0 32px 64px -16px rgba(27,24,20,0.28), 0 12px 24px -8px rgba(27,24,20,0.14), 0 2px 4px rgba(27,24,20,0.06)'
         : '0 2px 12px rgba(27,24,20,0.10), 0 1px 3px rgba(27,24,20,0.06)',
       flexShrink: 0, lineHeight: 0,
     }}>
@@ -593,14 +596,66 @@ const ImagePreview = ({ url, width = 300, float3d = false }) => {
 
   if (!float3d) return card;
 
-  // Effet 3D léger : rotation douce + animation flottante (cf .cv-float dans styles.css)
+  // Plus de rotation 3D — juste flottement vertical pour rester ultra-net
   return (
-    <div style={{ animation: 'cv-float 6s ease-in-out infinite', display: 'inline-block', perspective: '1400px' }}>
-      <div style={{ transform: 'rotateX(2deg) rotateY(-4deg)', transformStyle: 'preserve-3d', transition: 'transform .8s cubic-bezier(.2,.8,.2,1)' }}>
-        {card}
-      </div>
+    <div style={{ animation: 'cv-float 6s ease-in-out infinite', display: 'inline-block' }}>
+      {card}
     </div>
   );
 };
 
-Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder, ImagePreview, imageToWebP });
+// ---------------------------------------------------------------------------
+// ZoomableImage — image CV avec zoom au double-clic
+// • Double-clic 1x : zoom 2.5x centré sur le point cliqué
+// • Double-clic 2x : retour à la taille normale
+// • Cursor zoom-in / zoom-out indique l'état
+// ---------------------------------------------------------------------------
+const ZoomableImage = ({ src, alt = 'CV', maxHeight = '82vh' }) => {
+  const [zoomed, setZoomed] = useState(false);
+  const [origin, setOrigin] = useState('50% 50%');
+
+  const handleDoubleClick = (e) => {
+    if (zoomed) {
+      setZoomed(false);
+      setOrigin('50% 50%');
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      setOrigin(`${x}% ${y}%`);
+      setZoomed(true);
+    }
+  };
+
+  return (
+    <div
+      onDoubleClick={handleDoubleClick}
+      style={{
+        overflow: 'hidden',
+        borderRadius: 10,
+        boxShadow: 'var(--shadow-card)',
+        cursor: zoomed ? 'zoom-out' : 'zoom-in',
+        background: '#fff',
+        display: 'inline-block',
+        maxWidth: '100%',
+        userSelect: 'none',
+      }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        draggable={false}
+        style={{
+          display: 'block',
+          width: 'auto', height: 'auto',
+          maxWidth: '100%', maxHeight,
+          transformOrigin: origin,
+          transform: zoomed ? 'scale(2.5)' : 'scale(1)',
+          transition: 'transform 0.35s cubic-bezier(.2,.8,.2,1)',
+        }}
+      />
+    </div>
+  );
+};
+
+Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder, ImagePreview, ZoomableImage, imageToWebP });

@@ -137,29 +137,6 @@ const Analytics = ({ cvs }) => {
         {totals.map((tt) => <StatTile key={tt.label} {...tt} />)}
       </div>
 
-      {/* Scans over time — sparkline illustrative */}
-      <div className="card" style={{ padding: 32, marginBottom: 28 }}>
-        <div className="between" style={{ marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
-          <div>
-            <div className="eyebrow">{t("analytics.scansEyebrow")}</div>
-            <h3 className="display" style={{ margin: "10px 0 4px", fontSize: 36, fontWeight: 500, lineHeight: 1.05 }}>{totalScans}</h3>
-            <div className="muted" style={{ fontSize: 13 }}>{t("analytics.scansLabel")}</div>
-          </div>
-          <div className="tabs">
-            <button className="tab is-active">{t("analytics.tabScans")}</button>
-            <button className="tab">{t("analytics.tabAudio")}</button>
-            <button className="tab">{t("analytics.tabFeedback")}</button>
-          </div>
-        </div>
-        <SparkLine />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 10, padding: "0 4px", letterSpacing: "0.08em" }}>
-          <span>1 {lang === "es" ? "abr" : "avr"}</span>
-          <span>15 {lang === "es" ? "abr" : "avr"}</span>
-          <span>1 {lang === "es" ? "may" : "mai"}</span>
-          <span>15 {lang === "es" ? "may" : "mai"}</span>
-        </div>
-      </div>
-
       <div className="grid" style={{ gridTemplateColumns: "1.2fr 1fr", gap: 20, marginBottom: 28 }}>
         <div className="card" style={{ padding: 28 }}>
           <h3 className="display" style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 500 }}>{t("analytics.clicksTitle")}</h3>
