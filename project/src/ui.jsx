@@ -337,12 +337,14 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onStop }) =>
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(knownDuration);
   const playedRef = useRef(false);
+  const playStartRef = useRef(null); // position audio au moment du play (pour calculer le delta)
 
   useEffect(() => {
     setCurrentTime(0);
     setPlaying(false);
     setDuration(knownDuration);
     playedRef.current = false;
+    playStartRef.current = null;
   }, [src, knownDuration]);
 
   useEffect(() => {
@@ -374,8 +376,12 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onStop }) =>
     const onEnded = () => {
       setPlaying(false);
       setCurrentTime(0);
-      // Fin naturelle : envoie la durée totale comme un arrêt
-      if (onStop) onStop(Math.floor(a.duration || 0));
+      // Fin naturelle : delta = durée − position de départ (évite le surcomptage)
+      if (onStop) {
+        const delta = Math.max(0, Math.floor((a.duration || 0) - (playStartRef.current || 0)));
+        playStartRef.current = null;
+        onStop(delta);
+      }
     };
 
     a.addEventListener('timeupdate', onTime);
@@ -397,13 +403,19 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onStop }) =>
     if (playing) {
       a.pause();
       setPlaying(false);
-      // Envoie le temps écouté jusqu'au moment de la pause
-      if (onStop) onStop(Math.floor(a.currentTime || 0));
+      // Delta = position actuelle − position au moment du play (pas de surcomptage)
+      if (onStop) {
+        const delta = Math.max(0, Math.floor((a.currentTime || 0) - (playStartRef.current || 0)));
+        playStartRef.current = null;
+        onStop(delta);
+      }
     } else {
+      // Mémorise la position de départ avant de lancer la lecture
+      playStartRef.current = a.currentTime;
       a.play().then(() => {
         setPlaying(true);
         if (!playedRef.current && onPlay) { onPlay(); playedRef.current = true; }
-      }).catch(() => {});
+      }).catch(() => { playStartRef.current = null; });
     }
   };
 
@@ -422,16 +434,16 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onStop }) =>
   return (
     <div style={{ padding: 18, background: 'var(--surface-2)', borderRadius: 18, border: '1px solid var(--border-soft)' }}>
       <audio ref={audioRef} src={src} preload="metadata"/>
-      <div className="row gap-12">
-        <button type="button" className="audio-play" onClick={toggle} style={{ width: 44, height: 44 }}>
+      {label && (
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          {label}
+        </div>
+      )}
+      <div className="row gap-12" style={{ alignItems: 'center' }}>
+        <button type="button" className="audio-play" onClick={toggle} style={{ width: 44, height: 44, flexShrink: 0 }}>
           {playing ? <I.Pause size={14}/> : <I.Play size={14}/>}
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          {label && (
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-              {label}
-            </div>
-          )}
           <div className="audio-bar" onClick={seek} style={{ cursor: 'pointer' }}>
             <div className="audio-bar__progress" style={{ width: pct + '%' }}/>
           </div>
