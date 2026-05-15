@@ -329,7 +329,7 @@ const ComboboxField = ({ label, value, onChange, items = [], onCreate, placehold
 // AudioPlayerCustom — player unifié utilisé partout (Personnalisation, Preview, Public)
 // • Style premium identique partout
 // • Fix WebM/Opus duration === Infinity via seek-hack
-// • Props optionnelles : label, onPlay, onComplete (stats tracking)
+// • Props optionnelles : label, onPlay, onStop (stats tracking)
 // ---------------------------------------------------------------------------
 const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onStop }) => {
   const audioRef = useRef();
@@ -389,7 +389,7 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onStop }) =>
       a.removeEventListener('durationchange', onMeta);
       a.removeEventListener('ended', onEnded);
     };
-  }, [src, onComplete]);
+  }, [src, onStop]);
 
   const toggle = () => {
     const a = audioRef.current;
