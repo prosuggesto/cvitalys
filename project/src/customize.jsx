@@ -231,7 +231,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
                   }} />
                 </div>
                 <div style={{ marginTop: 12, fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>
-                  Image JPEG / PNG / WebP — une seule page recto
+                  JPEG — une seule page recto
                 </div>
               </React.Fragment>
             ) : (
@@ -239,10 +239,10 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
                 <I.Cv size={36} stroke="var(--subtle)" />
                 <div className="muted">{t("custom.cvNoneText")}</div>
                 <button className="btn btn--primary btn--sm" onClick={() => fileInputRef.current.click()}>
-                  <I.Upload size={14} /> {t("custom.cvImportBtn")}
+                  <I.Upload size={14} /> Importer mon CV (JPEG)
                 </button>
                 <div style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 280 }}>
-                  Image JPEG / PNG / WebP — une seule page recto
+                  JPEG — une seule page recto
                 </div>
                 <input type="file" accept="image/jpeg,image/png,image/webp" ref={fileInputRef} hidden onChange={(e) => {
                   if (e.target.files[0]) { setPendingFile(e.target.files[0]); update({ hasFile: true }); toast(t("custom.cvImported")); }

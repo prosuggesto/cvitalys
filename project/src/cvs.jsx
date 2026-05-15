@@ -177,10 +177,10 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
               placeholder="Hôtellerie"
             />
           </div>
-          <Field label={t("cvs.modal.add.cvFile")} hint="Image JPEG / PNG / WebP — une seule page recto (sera compressée en WebP)">
+          <Field label={t("cvs.modal.add.cvFile")} hint="JPEG — une seule page recto">
             <label className="card-empty" style={{ padding: 18, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", justifyContent: "center" }}>
               <I.Upload size={18} stroke="var(--muted)"/>
-              <span style={{ color: "var(--muted)", fontSize: 14 }}>{f.file?.name || "Importer une image de votre CV"}</span>
+              <span style={{ color: "var(--muted)", fontSize: 14 }}>{f.file?.name || "Importer mon CV (JPEG)"}</span>
               <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => setF({ ...f, file: e.target.files[0] || null })}/>
             </label>
           </Field>
