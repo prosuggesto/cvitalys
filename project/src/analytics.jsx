@@ -25,100 +25,195 @@ const MiniBar = ({ label, value, max, icon, brand }) => {
     </div>);
 };
 
-const SparkLine = () => {
-  const pts = [4, 6, 5, 8, 7, 9, 8, 12, 10, 14, 13, 16, 18, 16, 19, 22, 20, 24];
-  const max = Math.max(...pts);
-  const w = 600, h = 90, pad = 4;
-  const path = pts.map((p, i) => {
-    const x = pad + i / (pts.length - 1) * (w - pad * 2);
-    const y = h - pad - p / max * (h - pad * 2);
-    return `${i === 0 ? "M" : "L"}${x},${y}`;
-  }).join(" ");
-  const area = path + ` L${w - pad},${h} L${pad},${h} Z`;
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: "100%", height: 140 }}>
-      <defs>
-        <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#B69768" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="#B69768" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill="url(#grad)" />
-      <path d={path} fill="none" stroke="#B69768" strokeWidth="1.5" />
-    </svg>);
-};
-
 const Analytics = ({ cvs }) => {
   const { t, lang } = useT();
 
-  // Agrégats réels depuis cv.stats (rempli par normalizeCv depuis la table Supabase)
-  const sum = (key) => cvs.reduce((acc, cv) => acc + (cv.stats?.[key] || 0), 0);
-  const totalScans = sum('scans');
-  const totalAudioDem = sum('audioDemarrages');
-  const totalAudioArrets = sum('audioArrets');
-  const totalClicRetour = sum('clicRetour');
+  // ---- Filter UI state (avant appui sur Filtrer) --------------------------
+  const [period, setPeriod] = useState('30j');
+  const [sectorFilter, setSectorFilter] = useState('');
+  const [cvIdFilter, setCvIdFilter] = useState('');
 
-  const avgTime = cvs.length > 0
-    ? Math.round(cvs.reduce((acc, cv) => acc + (cv.stats?.avgTime || 0), 0) / cvs.length)
-    : 0;
+  // ---- Filtre appliqué (mis à jour quand on clique "Filtrer") -------------
+  const [applied, setApplied] = useState({ period: '30j', sector: '', cvId: '' });
+
+  // ---- Stats globales (chargées une fois, filtrées côté client) -----------
+  const [statsGlobales, setStatsGlobales] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  // Dériver l'userId depuis le premier CV
+  const userId = cvs.length > 0 ? cvs[0].utilisateur_id : null;
+
+  // Charger stats_globales au montage (ou quand userId devient disponible)
+  useEffect(() => {
+    if (!userId) return;
+    setLoadingStats(true);
+    api.getStatsGlobales(userId)
+      .then(rows => { setStatsGlobales(rows); setLoadingStats(false); })
+      .catch(() => { setStatsGlobales(null); setLoadingStats(false); });
+  }, [userId]);
+
+  // Map nom de secteur → secteur_id (pour filtrer stats_globales)
+  const sectorIdMap = useMemo(() => {
+    const map = {};
+    cvs.forEach(cv => { if (cv.sector && cv.secteur_id) map[cv.sector] = cv.secteur_id; });
+    return map;
+  }, [cvs]);
+
+  // Mode CV spécifique = le filtre appliqué a un CV sélectionné
+  const cvMode = !!applied.cvId;
+
+  // ---- Calcul de la période en mois/années --------------------------------
+  const getMonthSet = (periodKey) => {
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth() + 1; // 1-12
+    const numMonths = periodKey === '7j' ? 1 : periodKey === '30j' ? 2 : 3;
+    const set = new Set();
+    for (let i = 0; i < numMonths; i++) {
+      let m = curMonth - i;
+      let y = curYear;
+      if (m <= 0) { m += 12; y -= 1; }
+      set.add(`${y}-${m}`);
+    }
+    return set;
+  };
+
+  // ---- Données de travail (array d'objets stats à agréger) ----------------
+  const getWorkingStats = () => {
+    if (cvMode) {
+      // CV spécifique → ses stats depuis le tableau cvs (tout temps)
+      const cv = cvs.find(c => c.id === applied.cvId);
+      return cv && cv.stats ? [cv.stats] : [];
+    }
+
+    // Mode global : utiliser stats_globales si disponibles
+    if (statsGlobales !== null) {
+      const monthSet = getMonthSet(applied.period);
+      const secteurId = applied.sector ? sectorIdMap[applied.sector] : null;
+
+      const filtered = statsGlobales.filter(row => {
+        const periodOk = monthSet.has(`${row.annee}-${row.mois}`);
+        const sectorOk = !secteurId || row.secteur_id === secteurId;
+        return periodOk && sectorOk;
+      });
+
+      // Normaliser les colonnes stats_globales vers le même format que cv.stats
+      return filtered.map(row => ({
+        scans:            row.stat_scans || 0,
+        audioDemarrages:  row.stat_audio_demarrages || 0,
+        audioArrets:      row.stat_audio_arrets || 0,
+        totalTempsAudio:  row.stat_total_temps_audio_secondes || 0,
+        totalTempsPage:   row.stat_total_temps_page_secondes || 0,
+        clicRetour:       row.stat_clic_retour || 0,
+        clicEmail:        row.stat_clic_email || 0,
+        clicWhatsapp:     row.stat_clic_whatsapp || 0,
+        clicLinkedin:     row.stat_clic_linkedin || 0,
+        clicInstagram:    row.stat_clic_instagram || 0,
+        clicSiteWeb:      row.stat_clic_site_web || 0,
+        clicEchange:      row.stat_clic_echange || 0,
+        clicVoirCv:       row.stat_clic_voir_cv || 0,
+      }));
+    }
+
+    // Fallback : agréger depuis le tableau cvs (tout temps, tous les CV)
+    return cvs.map(cv => cv.stats || {});
+  };
+
+  const workingStats = getWorkingStats();
+  const sumStat = (key) => workingStats.reduce((acc, s) => acc + (s[key] || 0), 0);
+
+  const totalScans       = sumStat('scans');
+  const totalAudioDem    = sumStat('audioDemarrages');
+  const totalAudioArrets = sumStat('audioArrets');
+  const totalClicRetour  = sumStat('clicRetour');
+  const totalTempsAudio  = sumStat('totalTempsAudio');
+  const totalTempsPage   = sumStat('totalTempsPage');
+
+  // Temps moyen page — si stats_globales a le total, on calcule; sinon on prend la moyenne des CV
+  let avgTime = 0;
+  if (cvMode) {
+    const cv = cvs.find(c => c.id === applied.cvId);
+    avgTime = cv?.stats?.avgTime || 0;
+  } else if (statsGlobales !== null && totalTempsPage > 0 && totalScans > 0) {
+    avgTime = Math.round(totalTempsPage / totalScans);
+  } else if (!statsGlobales && cvs.length > 0) {
+    avgTime = Math.round(cvs.reduce((acc, cv) => acc + (cv.stats?.avgTime || 0), 0) / cvs.length);
+  }
+
   const avgTimeFmt = avgTime > 0
     ? `${Math.floor(avgTime / 60)}:${String(avgTime % 60).padStart(2, '0')}`
     : '—';
 
-  // Taux retour recruteur = clics sur "Donner un retour" / scans totaux
   const feedbackRate = totalScans > 0
     ? ((totalClicRetour / totalScans) * 100).toFixed(1) + '%'
     : '—';
 
-  // Temps moyen d'écoute audio (calculé depuis les stats individuelles de chaque CV)
-  const totalTempsAudio = cvs.reduce((acc, cv) => acc + (cv.stats?.totalTempsAudio || 0), 0);
   const avgAudioSec = totalAudioArrets > 0 ? Math.round(totalTempsAudio / totalAudioArrets) : 0;
   const avgAudioFmt = avgAudioSec > 0
     ? `${Math.floor(avgAudioSec / 60)}:${String(avgAudioSec % 60).padStart(2, '0')}`
     : '—';
 
-  // Top CV
+  // ---- Champions : toujours depuis les données all-time (tableau cvs) ----
+  const allTimeScans = cvs.reduce((acc, cv) => acc + (cv.stats?.scans || 0), 0);
+
   const topCv = cvs.length > 0
-    ? cvs.reduce((best, cv) => ((cv.stats ? cv.stats.scans : 0) > (best.stats ? best.stats.scans : 0) ? cv : best), cvs[0])
+    ? cvs.reduce((best, cv) => ((cv.stats?.scans || 0) > (best.stats?.scans || 0) ? cv : best), cvs[0])
     : null;
-  const topCvScans = topCv && topCv.stats ? topCv.stats.scans : 0;
-  const topCvShare = totalScans > 0 && topCv
-    ? Math.round((topCvScans / totalScans) * 100) + '%'
+  const topCvScans = topCv?.stats?.scans || 0;
+  const topCvShare = allTimeScans > 0 && topCv
+    ? Math.round((topCvScans / allTimeScans) * 100) + '%'
     : '0%';
 
-  // Stats agrégées par secteur pour top secteur
   const sectorMap = {};
-  cvs.forEach((cv) => {
+  cvs.forEach(cv => {
     const sector = cv.sector || '—';
     if (!sectorMap[sector]) sectorMap[sector] = 0;
-    sectorMap[sector] += cv.stats ? cv.stats.scans : 0;
+    sectorMap[sector] += cv.stats?.scans || 0;
   });
   const topSectorEntry = Object.entries(sectorMap).sort((a, b) => b[1] - a[1])[0];
   const topSector = topSectorEntry ? { name: topSectorEntry[0], scans: topSectorEntry[1] } : { name: '—', scans: 0 };
-  const topSectorShare = totalScans > 0 ? Math.round((topSector.scans / totalScans) * 100) + '%' : '0%';
+  const topSectorShare = allTimeScans > 0 ? Math.round((topSector.scans / allTimeScans) * 100) + '%' : '0%';
 
+  // ---- Clics par canal -----------------------------------------------------
+  const clicks = [
+    { label: "WhatsApp",                                      value: sumStat('clicWhatsapp'),  brand: "whatsapp" },
+    { label: "Gmail",                                         value: sumStat('clicEmail'),     brand: "gmail" },
+    { label: "LinkedIn",                                      value: sumStat('clicLinkedin'),  brand: "linkedin" },
+    { label: "Instagram",                                     value: sumStat('clicInstagram'), brand: "instagram" },
+    { label: lang === "es" ? "Sitio web" : "Site web",       value: sumStat('clicSiteWeb'),   icon: "Globe" },
+  ];
+  const maxClicks = Math.max(...clicks.map(c => c.value), 1);
+
+  // ---- Tiles KPI -----------------------------------------------------------
   const totals = [
-    { label: t("analytics.totalScans"), value: String(totalScans), trend: null },
-    { label: t("analytics.avgTime"), value: avgTimeFmt, trend: null },
-    // Taux retour recruteur = ratio réel des clics sur "Donner un retour" / scans
-    { label: t("analytics.feedbackRate"), value: feedbackRate, trend: null },
+    { label: t("analytics.totalScans"),   value: String(totalScans), trend: null },
+    { label: t("analytics.avgTime"),      value: avgTimeFmt,         trend: null },
+    { label: t("analytics.feedbackRate"), value: feedbackRate,       trend: null },
   ];
 
   const engagement = [
-    { label: t("analytics.engagement.launched"), value: totalAudioDem },
-    { label: t("analytics.engagement.stopped"), value: totalAudioArrets },
-    { label: t("analytics.engagement.avgTime"), value: avgAudioFmt },
+    { label: t("analytics.engagement.launched"), value: totalAudioDem    },
+    { label: t("analytics.engagement.stopped"),  value: totalAudioArrets },
+    { label: t("analytics.engagement.avgTime"),  value: avgAudioFmt      },
   ];
 
-  // Clics réels par canal (depuis cv.stats.click*)
-  const clicks = [
-    { label: "WhatsApp", value: sum('clicWhatsapp'), brand: "whatsapp" },
-    { label: "Gmail", value: sum('clicEmail'), brand: "gmail" },
-    { label: "LinkedIn", value: sum('clicLinkedin'), brand: "linkedin" },
-    { label: "Instagram", value: sum('clicInstagram'), brand: "instagram" },
-    { label: lang === "es" ? "Sitio web" : "Site web", value: sum('clicSiteWeb'), icon: "Globe" },
-  ];
-  const maxClicks = Math.max(...clicks.map((c) => c.value), 1);
+  // ---- Appliquer le filtre -------------------------------------------------
+  const applyFilter = () => {
+    setApplied({
+      period: cvIdFilter ? 'all' : period,
+      sector: cvIdFilter ? '' : sectorFilter,
+      cvId: cvIdFilter,
+    });
+  };
+
+  // Textes bilingues inline
+  const sinceCreation = lang === 'es' ? 'Desde su creación' : 'Depuis sa création';
+  const selectedCvName = cvMode ? (cvs.find(c => c.id === applied.cvId)?.name || '') : '';
+  const cvInfoMsg = cvMode
+    ? (lang === 'es'
+        ? `Mostrando estadísticas desde la creación de « ${selectedCvName} ».`
+        : `Statistiques affichées depuis la création de « ${selectedCvName} ».`)
+    : '';
 
   return (
     <div className="page" style={{ maxWidth: 1320 }}>
@@ -127,37 +222,84 @@ const Analytics = ({ cvs }) => {
         title={t("analytics.title")}
         subtitle={t("analytics.sub")} />
 
-      <div className="card" style={{ padding: 18, marginBottom: 28, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-        <select className="select" style={{ flex: "1 1 160px", maxWidth: 200 }} defaultValue="30j">
+      {/* Barre de filtres */}
+      <div className="card" style={{ padding: 18, marginBottom: 16, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+
+        {/* Sélecteur de période — désactivé si un CV est sélectionné */}
+        <select
+          className="select"
+          style={{ flex: "1 1 160px", maxWidth: 200, opacity: cvIdFilter ? 0.5 : 1 }}
+          value={cvIdFilter ? 'since' : period}
+          onChange={e => setPeriod(e.target.value)}
+          disabled={!!cvIdFilter}
+        >
+          {cvIdFilter && <option value="since">{sinceCreation}</option>}
           <option value="7j">{t("analytics.period7")}</option>
           <option value="30j">{t("analytics.period30")}</option>
           <option value="3m">{t("analytics.period3m")}</option>
         </select>
-        <select className="select" style={{ flex: "1 1 160px", maxWidth: 220 }} defaultValue="">
+
+        {/* Sélecteur de secteur — désactivé si un CV est sélectionné */}
+        <select
+          className="select"
+          style={{ flex: "1 1 160px", maxWidth: 220, opacity: cvIdFilter ? 0.5 : 1 }}
+          value={cvIdFilter ? '' : sectorFilter}
+          onChange={e => setSectorFilter(e.target.value)}
+          disabled={!!cvIdFilter}
+        >
           <option value="">{t("analytics.allSectors")}</option>
-          {[...new Set(cvs.map((c) => c.sector).filter(Boolean))].map((s) => (
+          {[...new Set(cvs.map(c => c.sector).filter(Boolean))].map(s => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
-        <select className="select" style={{ flex: "1 1 160px", maxWidth: 220 }} defaultValue="">
+
+        {/* Sélecteur de CV — verrouille automatiquement les autres filtres */}
+        <select
+          className="select"
+          style={{ flex: "1 1 160px", maxWidth: 220 }}
+          value={cvIdFilter}
+          onChange={e => {
+            setCvIdFilter(e.target.value);
+            if (e.target.value) {
+              // Réinitialiser secteur quand on passe en mode CV
+              setSectorFilter('');
+            }
+          }}
+        >
           <option value="">{t("analytics.allCvs")}</option>
-          {cvs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {cvs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <button className="btn btn--primary" style={{ marginLeft: "auto" }}>{t("analytics.filter")}</button>
+
+        <button
+          className="btn btn--primary"
+          style={{ marginLeft: "auto" }}
+          onClick={applyFilter}
+        >
+          {loadingStats ? '…' : t("analytics.filter")}
+        </button>
       </div>
 
-      {/* KPI tiles */}
+      {/* Message d'info quand un CV spécifique est affiché */}
+      {cvMode && (
+        <div style={{ marginBottom: 20, padding: "10px 16px", background: "var(--surface-2)", borderRadius: 10, fontSize: 13, color: "var(--muted)", border: "1px solid var(--border-soft)", display: "flex", alignItems: "center", gap: 8 }}>
+          <I.Info size={14} style={{ flexShrink: 0 }} />
+          {cvInfoMsg}
+        </div>
+      )}
+
+      {/* Tuiles KPI */}
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", marginBottom: 28 }}>
-        {totals.map((tt) => <StatTile key={tt.label} {...tt} />)}
+        {totals.map(tt => <StatTile key={tt.label} {...tt} />)}
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: "1.2fr 1fr", gap: 20, marginBottom: 28 }}>
         <div className="card" style={{ padding: 28 }}>
           <h3 className="display" style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 500 }}>{t("analytics.clicksTitle")}</h3>
           <p className="muted" style={{ margin: "0 0 12px", fontSize: 13 }}>{t("analytics.clicksSub")}</p>
-          {clicks.map((c) => <MiniBar key={c.label} {...c} max={maxClicks} />)}
+          {clicks.map(c => <MiniBar key={c.label} {...c} max={maxClicks} />)}
         </div>
 
+        {/* Champions — toujours basé sur les stats all-time de tous les CVs */}
         <div className="card" style={{ padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
           <h3 className="display" style={{ margin: 0, fontSize: 22, fontWeight: 500 }}>{t("analytics.championsTitle")}</h3>
 
@@ -192,7 +334,7 @@ const Analytics = ({ cvs }) => {
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", marginBottom: 28 }}>
-        {engagement.map((e) => <StatTile key={e.label} label={e.label} value={e.value} />)}
+        {engagement.map(e => <StatTile key={e.label} label={e.label} value={e.value} />)}
       </div>
 
       {/* Interactions — fonctionnalité future */}

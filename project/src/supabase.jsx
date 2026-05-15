@@ -290,6 +290,18 @@ const api = {
       });
   },
 
+  // Toutes les lignes stats_globales de l'utilisateur — le filtrage (mois/secteur) est fait côté client
+  getStatsGlobales(userId) {
+    return sb
+      .from('stats_globales')
+      .select('*')
+      .eq('utilisateur_id', userId)
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return data || [];
+      });
+  },
+
   // ---- NFC -----------------------------------------------------------------
 
   getNfcCards(userId) {
