@@ -205,7 +205,10 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
         <span className="badge badge--green badge--dot">{t("public.scanned")}</span>
       </div>
       <div style={{ position: "relative", display: "flex", justifyContent: "center", padding: compact ? "8px 0" : "16px 4px" }}>
-        <CVPreviewVisual cv={cv} scale={compact ? 1.15 : 1.35} float3d={true} />
+        {cv.cv_url
+          ? <ImagePreview url={cv.cv_url} width={compact ? 260 : 300} float3d={true}/>
+          : <CVPreviewVisual cv={cv} scale={compact ? 1.15 : 1.35} float3d={true} />
+        }
         {onViewCv &&
         <button className="btn btn--secondary btn--sm" style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.95)", boxShadow: "var(--shadow-card)", zIndex: 2 }} onClick={onViewCv}>
             <I.Eye size={14} /> {t("public.viewCv")}
@@ -337,11 +340,7 @@ const PublicPage = ({ shortCode, navigate }) => {
 
   const handleViewCv = () => {
     api.incrementStat(shortCode, 'clic_voir_cv');
-    if (cv.cv_url) {
-      window.open(cv.cv_url, '_blank');
-    } else {
-      setViewerOpen(true);
-    }
+    setViewerOpen(true);
   };
 
   return (
@@ -363,7 +362,10 @@ const PublicPage = ({ shortCode, navigate }) => {
           <div className="eyebrow" style={{ marginBottom: 8 }}>{cv.name}</div>
           <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: "0 0 16px" }}>{t("public.cvComplete")}</h2>
           <div style={{ display: "flex", justifyContent: "center" }}>
-            <CVPreviewVisual cv={cv} scale={2.1} />
+            {cv.cv_url
+              ? <img src={cv.cv_url} alt="CV" style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: 10, boxShadow: 'var(--shadow-card)', display: 'block' }}/>
+              : <CVPreviewVisual cv={cv} scale={2.1} />
+            }
           </div>
         </div>
       </Modal>

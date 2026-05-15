@@ -213,22 +213,24 @@ const api = {
 
   // ---- STORAGE -------------------------------------------------------------
 
-  uploadCvFile(userId, cvId, file) {
-    const ext = file.name.split('.').pop();
-    const path = `${userId}/${cvId}/cv.${ext}`;
+  // Reçoit un Blob WebP déjà compressé (voir window.imageToWebP)
+  uploadCvFile(userId, cvId, blob) {
+    const path = `${userId}/${cvId}/cv.webp`;
     return sb.storage
       .from('cvs-files')
-      .upload(path, file, { upsert: true })
+      .upload(path, blob, { upsert: true, contentType: 'image/webp' })
       .then(({ data, error }) => {
         if (error) throw error;
         const { data: urlData } = sb.storage.from('cvs-files').getPublicUrl(path);
+        // Cache buster pour forcer le navigateur à récupérer la nouvelle version après remplacement
+        const url = urlData.publicUrl + '?t=' + Date.now();
         return sb
           .from('cvs')
-          .update({ cv_url: urlData.publicUrl })
+          .update({ cv_url: url })
           .eq('id', cvId)
           .then(({ error: e2 }) => {
             if (e2) throw e2;
-            return urlData.publicUrl;
+            return url;
           });
       });
   },

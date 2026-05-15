@@ -19,7 +19,7 @@ const CVCard = ({ cv, onPresent, onCustomize, onPreview, onDelete }) => {
       </div>
     </div>
     <div style={{ display: "flex", justifyContent: "center", padding: "4px 0" }}>
-      {cv.cv_url ? <PdfCardPreview url={cv.cv_url} width={300}/> : <CVPreviewVisual cv={cv} scale={1}/>}
+      {cv.cv_url ? <ImagePreview url={cv.cv_url} width={300}/> : <CVPreviewVisual cv={cv} scale={1}/>}
     </div>
     <button className="btn btn--primary btn--block" onClick={onPresent}>
       <I.QR size={16}/> {t("cvs.present")}
@@ -139,7 +139,11 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
       .then(([posteId, secteurId]) => api.createCv(userId, { nom_cv: f.name, poste_id: posteId, secteur_id: secteurId }))
       .then((newCv) => {
         const uploads = [];
-        if (f.file) uploads.push(api.uploadCvFile(userId, newCv.dbId, f.file).then((url) => { newCv.cv_url = url; newCv.hasFile = true; }));
+        if (f.file) uploads.push(
+          imageToWebP(f.file)
+            .then((webp) => api.uploadCvFile(userId, newCv.dbId, webp))
+            .then((url) => { newCv.cv_url = url; newCv.hasFile = true; })
+        );
         if (f.audioBlob) uploads.push(api.uploadAudio(userId, newCv.dbId, f.audioBlob).then((url) => { newCv.audio_url = url; newCv.audio = { url }; }));
         return Promise.all(uploads).then(() => newCv);
       })
@@ -173,11 +177,11 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
               placeholder="Hôtellerie"
             />
           </div>
-          <Field label={t("cvs.modal.add.cvFile")}>
+          <Field label={t("cvs.modal.add.cvFile")} hint="Image JPEG / PNG / WebP — une seule page recto (sera compressée en WebP)">
             <label className="card-empty" style={{ padding: 18, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", justifyContent: "center" }}>
               <I.Upload size={18} stroke="var(--muted)"/>
-              <span style={{ color: "var(--muted)", fontSize: 14 }}>{f.file?.name || t("cvs.modal.add.cvHint")}</span>
-              <input type="file" accept="application/pdf" hidden onChange={(e) => setF({ ...f, file: e.target.files[0] || null })}/>
+              <span style={{ color: "var(--muted)", fontSize: 14 }}>{f.file?.name || "Importer une image de votre CV"}</span>
+              <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => setF({ ...f, file: e.target.files[0] || null })}/>
             </label>
           </Field>
           <Field label={t("cvs.modal.add.audio")}>

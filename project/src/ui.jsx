@@ -499,52 +499,50 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
 };
 
 // ---------------------------------------------------------------------------
-// PdfCardPreview — affiche la 1re page d'un PDF dans un mini cadre A4
-// Utilise transform:scale pour réduire un grand iframe dans un petit conteneur
+// imageToWebP — convertit une image (JPEG/PNG/WebP) en Blob WebP compressé
+// Redimensionne si plus large que maxWidth pour garder un fichier léger.
 // ---------------------------------------------------------------------------
-const PdfCardPreview = ({ url, width = 300 }) => {
+function imageToWebP(file, maxWidth = 1600, quality = 0.88) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      const scale = Math.min(1, maxWidth / img.width);
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Conversion WebP échouée'));
+      }, 'image/webp', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image invalide')); };
+    img.src = url;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// ImagePreview — affiche une image CV (WebP) avec ratio A4, optionnellement 3D
+// ---------------------------------------------------------------------------
+const ImagePreview = ({ url, width = 300, float3d = false }) => {
   const H = Math.round(width * 1.414); // ratio A4
-  const nativeW = 900, nativeH = Math.round(nativeW * 1.414);
-  const scale = width / nativeW;
-  return (
+  if (!url) return null;
+  const card = (
     <div style={{
       width, height: H, borderRadius: 8, overflow: 'hidden', background: '#fff',
       boxShadow: '0 2px 12px rgba(27,24,20,0.10), 0 1px 3px rgba(27,24,20,0.06)',
       position: 'relative', flexShrink: 0,
     }}>
-      <div style={{ width: nativeW, height: nativeH, transform: `scale(${scale})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
-        <iframe src={url} width={nativeW} height={nativeH} style={{ border: 'none', display: 'block' }} title="Aperçu CV"/>
-      </div>
+      <img src={url} alt="CV" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', display: 'block' }}/>
     </div>
   );
+  if (float3d) return <div className="cv-3d"><div>{card}</div></div>;
+  return card;
 };
 
-// ---------------------------------------------------------------------------
-// PdfCardPreview3D — même chose mais avec effet 3D flottant (pour Personnalisation)
-// ---------------------------------------------------------------------------
-const PdfCardPreview3D = ({ url, width = 280 }) => {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', justifyContent: 'center', padding: '20px 0',
-        animation: 'cv-float 6s ease-in-out infinite',
-      }}
-    >
-      <div style={{
-        transform: hovered
-          ? 'perspective(1200px) rotateX(1deg) rotateY(-2deg)'
-          : 'perspective(1200px) rotateX(4deg) rotateY(-7deg)',
-        filter: 'drop-shadow(20px 16px 26px rgba(27,24,20,0.18)) drop-shadow(5px 4px 8px rgba(27,24,20,0.08))',
-        transition: 'transform .8s cubic-bezier(.2,.8,.2,1)',
-        borderRadius: 8, overflow: 'hidden', flexShrink: 0,
-      }}>
-        <PdfCardPreview url={url} width={width}/>
-      </div>
-    </div>
-  );
-};
-
-Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder, PdfCardPreview, PdfCardPreview3D });
+Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder, ImagePreview, imageToWebP });

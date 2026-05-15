@@ -64,7 +64,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
   const [saving, setSaving] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [pendingFile, setPendingFile] = useState(null);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState(null);
   const [postes, setPostes] = useState([]);
   const [secteurs, setSecteurs] = useState([]);
   const [roleItem, setRoleItem] = useState({ id: cv?.poste_id || null, nom: cv?.role || '' });
@@ -75,7 +75,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
     setLocal(cv);
     setAudioBlob(null);
     setPendingFile(null);
-    setPdfPreviewUrl(null);
+    setLocalPreviewUrl(null);
     setRoleItem({ id: cv?.poste_id || null, nom: cv?.role || '' });
     setSecteurItem({ id: cv?.secteur_id || null, nom: cv?.sector || '' });
     if (session) {
@@ -84,11 +84,11 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
     }
   }, [cv?.id]);
 
-  // Créer une URL objet pour prévisualiser le PDF sélectionné localement
+  // Créer une URL objet pour prévisualiser l'image sélectionnée localement (avant upload)
   useEffect(() => {
-    if (!pendingFile) { setPdfPreviewUrl(null); return; }
+    if (!pendingFile) { setLocalPreviewUrl(null); return; }
     const url = URL.createObjectURL(pendingFile);
-    setPdfPreviewUrl(url);
+    setLocalPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [pendingFile]);
 
@@ -153,9 +153,9 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
           const uploads = [];
           if (pendingFile) {
             uploads.push(
-              api.uploadCvFile(userId, cvId, pendingFile).then((url) => {
-                update({ cv_url: url, hasFile: true });
-              })
+              imageToWebP(pendingFile)
+                .then((webp) => api.uploadCvFile(userId, cvId, webp))
+                .then((url) => { update({ cv_url: url, hasFile: true }); })
             );
           }
           if (audioBlob) {
@@ -181,8 +181,8 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
     });
   };
 
-  // URL du PDF à afficher : fichier en attente d'upload > URL déjà stockée
-  const displayPdfUrl = pdfPreviewUrl || local.cv_url || null;
+  // URL de l'image à afficher : fichier en attente d'upload > URL déjà stockée
+  const displayImageUrl = localPreviewUrl || local.cv_url || null;
 
   return (
     <div className="page" style={{ maxWidth: 1320 }}>
@@ -213,20 +213,25 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
               <span className="badge badge--neutral">{local.hasFile ? t("custom.cvImported") : t("custom.cvNone")}</span>
             </div>
 
-            {displayPdfUrl ? (
+            {displayImageUrl ? (
               <React.Fragment>
-                {/* PDF avec effet 3D */}
-                <PdfCardPreview3D url={displayPdfUrl} width={260}/>
+                {/* Image CV avec effet 3D flottant */}
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
+                  <ImagePreview url={displayImageUrl} width={280} float3d/>
+                </div>
                 <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 4 }}>
                   <button className="btn btn--secondary btn--sm" onClick={() => fileInputRef.current.click()}>
                     <I.Upload size={14} /> {t("common.replace")}
                   </button>
-                  <button className="btn btn--ghost btn--sm" onClick={() => window.open(displayPdfUrl, '_blank')}>
+                  <button className="btn btn--ghost btn--sm" onClick={() => window.open(displayImageUrl, '_blank')}>
                     <I.Eye size={14} /> {t("common.fullscreen")}
                   </button>
-                  <input type="file" accept="application/pdf" ref={fileInputRef} hidden onChange={(e) => {
+                  <input type="file" accept="image/jpeg,image/png,image/webp" ref={fileInputRef} hidden onChange={(e) => {
                     if (e.target.files[0]) { setPendingFile(e.target.files[0]); update({ hasFile: true }); toast(t("custom.cvImported")); }
                   }} />
+                </div>
+                <div style={{ marginTop: 12, fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>
+                  Image JPEG / PNG / WebP — une seule page recto
                 </div>
               </React.Fragment>
             ) : (
@@ -236,7 +241,10 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
                 <button className="btn btn--primary btn--sm" onClick={() => fileInputRef.current.click()}>
                   <I.Upload size={14} /> {t("custom.cvImportBtn")}
                 </button>
-                <input type="file" accept="application/pdf" ref={fileInputRef} hidden onChange={(e) => {
+                <div style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 280 }}>
+                  Image JPEG / PNG / WebP — une seule page recto
+                </div>
+                <input type="file" accept="image/jpeg,image/png,image/webp" ref={fileInputRef} hidden onChange={(e) => {
                   if (e.target.files[0]) { setPendingFile(e.target.files[0]); update({ hasFile: true }); toast(t("custom.cvImported")); }
                 }} />
               </div>
