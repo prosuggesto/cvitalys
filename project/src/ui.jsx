@@ -336,14 +336,12 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onStop }) =>
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(knownDuration);
-  const playedRef = useRef(false);
   const playStartRef = useRef(null); // position audio au moment du play (pour calculer le delta)
 
   useEffect(() => {
     setCurrentTime(0);
     setPlaying(false);
     setDuration(knownDuration);
-    playedRef.current = false;
     playStartRef.current = null;
   }, [src, knownDuration]);
 
@@ -414,7 +412,7 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onStop }) =>
       playStartRef.current = a.currentTime;
       a.play().then(() => {
         setPlaying(true);
-        if (!playedRef.current && onPlay) { onPlay(); playedRef.current = true; }
+        if (onPlay) onPlay(); // chaque appui sur play = 1 démarrage compté
       }).catch(() => { playStartRef.current = null; });
     }
   };
