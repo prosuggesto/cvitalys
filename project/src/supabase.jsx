@@ -48,6 +48,14 @@ function normalizeCv(row) {
       avgTime: row.stat_temps_moyen_page_secondes || 0,
       audioDemarrages: row.stat_audio_demarrages || 0,
       audioCompletes: row.stat_audio_completes || 0,
+      clicVoirCv: row.stat_clic_voir_cv || 0,
+      clicEchange: row.stat_clic_echange || 0,
+      clicRetour: row.stat_clic_retour || 0,
+      clicEmail: row.stat_clic_email || 0,
+      clicWhatsapp: row.stat_clic_whatsapp || 0,
+      clicLinkedin: row.stat_clic_linkedin || 0,
+      clicInstagram: row.stat_clic_instagram || 0,
+      clicSiteWeb: row.stat_clic_site_web || 0,
     },
     est_public: row.est_public,
     utilisateur_id: row.utilisateur_id,
@@ -122,6 +130,7 @@ const api = {
   // ---- CVS -----------------------------------------------------------------
 
   getCvs(userId) {
+    // `*` ramène toutes les colonnes y compris les stats (stat_clic_*, stat_scans, etc.)
     return sb
       .from('cvs')
       .select('*, postes(nom), secteurs(nom)')

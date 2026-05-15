@@ -2,14 +2,14 @@
 
 const { useState, useEffect, useRef, useMemo } = React;
 
-const Modal = ({ open, onClose, children, width, padding }) => {
+const Modal = ({ open, onClose, children, width, padding, zIndex }) => {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape" && open) onClose && onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
   return (
-    <div className={"modal-backdrop" + (open ? " is-open" : "")} onClick={onClose}>
+    <div className={"modal-backdrop" + (open ? " is-open" : "")} onClick={onClose} style={zIndex ? { zIndex } : undefined}>
       <div className="modal" style={{ maxWidth: width || 920, padding: padding ?? 0 }} onClick={(e) => e.stopPropagation()}>
         <button className="modal__close" onClick={onClose} aria-label="Fermer">
           <I.Close size={16}/>
@@ -714,4 +714,207 @@ const ZoomableImage = ({ src, alt = 'CV', maxHeight = '85vh' }) => {
   );
 };
 
-Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder, ImagePreview, ZoomableImage, imageToWebP });
+// ---------------------------------------------------------------------------
+// DateTimePicker — input + modal calendrier moderne (style iPhone Calendar)
+// Stocke la valeur en ISO string (ex: "2026-05-15T14:30:00.000Z")
+// ---------------------------------------------------------------------------
+const fmtDateTimeFr = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+         ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+};
+
+const DateTimePicker = ({ value, onChange, placeholder = 'Sélectionner une date et heure' }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <React.Fragment>
+      <div
+        className="input"
+        onClick={() => setOpen(true)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 8 }}
+      >
+        <span style={{ color: value ? 'var(--ink)' : 'var(--subtle)', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {value ? fmtDateTimeFr(value) : placeholder}
+        </span>
+        <I.Calendar size={16} stroke="var(--muted)"/>
+      </div>
+      {open && (
+        <DateTimePickerModal
+          value={value}
+          onConfirm={(v) => { onChange(v); setOpen(false); }}
+          onClear={() => { onChange(''); setOpen(false); }}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </React.Fragment>
+  );
+};
+
+const DateTimePickerModal = ({ value, onConfirm, onClear, onClose }) => {
+  const initial = value ? new Date(value) : new Date();
+  const safeInitial = isNaN(initial) ? new Date() : initial;
+  const [month, setMonth] = useState(new Date(safeInitial.getFullYear(), safeInitial.getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : null);
+  const [hour, setHour] = useState(value ? safeInitial.getHours() : 9);
+  const [minute, setMinute] = useState(value ? safeInitial.getMinutes() : 0);
+
+  const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  const dayNames = ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'];
+
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+  const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const startDow = (firstDay.getDay() + 6) % 7; // Lundi = 0
+  const daysInMonth = lastDay.getDate();
+  const prevLast = new Date(month.getFullYear(), month.getMonth(), 0).getDate();
+
+  const cells = [];
+  for (let i = startDow - 1; i >= 0; i--) {
+    cells.push({ day: prevLast - i, current: false, date: new Date(month.getFullYear(), month.getMonth() - 1, prevLast - i) });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ day: d, current: true, date: new Date(month.getFullYear(), month.getMonth(), d) });
+  }
+  let trailing = 1;
+  while (cells.length < 42) {
+    cells.push({ day: trailing, current: false, date: new Date(month.getFullYear(), month.getMonth() + 1, trailing) });
+    trailing++;
+  }
+
+  const today = new Date();
+  const sameDay = (a, b) => a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+  const navMonth = (delta) => setMonth(new Date(month.getFullYear(), month.getMonth() + delta, 1));
+
+  const setToday = () => {
+    const now = new Date();
+    setMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+    setSelectedDate(now);
+  };
+
+  const handleConfirm = () => {
+    if (!selectedDate) return;
+    const d = new Date(selectedDate);
+    d.setHours(hour, minute, 0, 0);
+    onConfirm(d.toISOString());
+  };
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  return (
+    <Modal open={true} onClose={onClose} width={460} zIndex={200}>
+      <div style={{ padding: 28 }}>
+        <h3 className="display" style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', textAlign: 'center' }}>
+          Date et heure
+        </h3>
+        <p className="muted" style={{ textAlign: 'center', margin: '0 0 22px', fontSize: 13 }}>
+          Sélectionnez le jour puis l'heure souhaitée
+        </p>
+
+        {/* Navigation mois */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <button type="button" onClick={() => navMonth(-1)} className="icon-btn" aria-label="Mois précédent">
+            <I.Arrow size={16} stroke="var(--ink-2)" sw={1.8} viewBox="0 0 24 24" />
+          </button>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: 19, letterSpacing: '-0.005em' }}>
+            {monthNames[month.getMonth()]} {month.getFullYear()}
+          </span>
+          <button type="button" onClick={() => navMonth(1)} className="icon-btn" aria-label="Mois suivant" style={{ transform: 'rotate(180deg)' }}>
+            <I.Arrow size={16} stroke="var(--ink-2)" sw={1.8} viewBox="0 0 24 24" />
+          </button>
+        </div>
+
+        {/* Jours de la semaine */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 6 }}>
+          {dayNames.map((d) => (
+            <div key={d} style={{ textAlign: 'center', fontSize: 11, color: 'var(--muted)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '4px 0' }}>
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Grille des jours */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 22 }}>
+          {cells.map((c, i) => {
+            const isToday = sameDay(c.date, today);
+            const isSelected = sameDay(c.date, selectedDate);
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => c.current && setSelectedDate(c.date)}
+                disabled={!c.current}
+                style={{
+                  height: 40,
+                  border: isToday && !isSelected ? '1px solid var(--gold-deep)' : 'none',
+                  borderRadius: 999,
+                  cursor: c.current ? 'pointer' : 'default',
+                  background: isSelected ? 'var(--ink)' : 'transparent',
+                  color: isSelected ? '#F7F3EC' : !c.current ? 'var(--subtle)' : isToday ? 'var(--gold-deep)' : 'var(--ink)',
+                  fontWeight: isSelected || isToday ? 600 : 400,
+                  fontSize: 14,
+                  transition: 'background .15s, color .15s, transform .1s',
+                  fontFamily: 'inherit',
+                }}
+                onMouseEnter={(e) => { if (c.current && !isSelected) e.currentTarget.style.background = 'var(--bg-soft)'; }}
+                onMouseLeave={(e) => { if (c.current && !isSelected) e.currentTarget.style.background = 'transparent'; }}
+              >
+                {c.day}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Heure */}
+        <div style={{ marginBottom: 22 }}>
+          <div className="label" style={{ marginBottom: 10, textAlign: 'center' }}>Heure</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center' }}>
+            <input
+              type="text" inputMode="numeric" maxLength={2}
+              value={pad2(hour)}
+              onChange={(e) => {
+                const n = parseInt(e.target.value.replace(/\D/g, '').slice(0, 2)) || 0;
+                setHour(Math.min(23, n));
+              }}
+              style={{
+                width: 78, height: 60, textAlign: 'center', fontSize: 26, fontWeight: 500,
+                border: '1px solid var(--border-strong)', borderRadius: 14, fontFamily: 'var(--font-mono)',
+                background: 'var(--surface)', outline: 'none', color: 'var(--ink)',
+              }}
+            />
+            <span style={{ fontSize: 26, fontWeight: 600, color: 'var(--muted)' }}>:</span>
+            <input
+              type="text" inputMode="numeric" maxLength={2}
+              value={pad2(minute)}
+              onChange={(e) => {
+                const n = parseInt(e.target.value.replace(/\D/g, '').slice(0, 2)) || 0;
+                setMinute(Math.min(59, n));
+              }}
+              style={{
+                width: 78, height: 60, textAlign: 'center', fontSize: 26, fontWeight: 500,
+                border: '1px solid var(--border-strong)', borderRadius: 14, fontFamily: 'var(--font-mono)',
+                background: 'var(--surface)', outline: 'none', color: 'var(--ink)',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={setToday} style={{ flex: 1 }}>
+            Aujourd'hui
+          </button>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={onClear} style={{ flex: 1 }}>
+            Effacer
+          </button>
+          <button type="button" className="btn btn--primary" onClick={handleConfirm} disabled={!selectedDate} style={{ flex: 1.5 }}>
+            Confirmer
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder, ImagePreview, ZoomableImage, DateTimePicker, fmtDateTimeFr, imageToWebP });

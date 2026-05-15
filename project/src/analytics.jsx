@@ -51,16 +51,26 @@ const SparkLine = () => {
 const Analytics = ({ cvs }) => {
   const { t, lang } = useT();
 
-  // Calculer les agrégats depuis les données réelles des CVs
-  const totalScans = cvs.reduce((acc, cv) => acc + (cv.stats ? cv.stats.scans : 0), 0);
-  const totalAudioDem = cvs.reduce((acc, cv) => acc + (cv.stats ? cv.stats.audioDemarrages : 0), 0);
-  const totalAudioComp = cvs.reduce((acc, cv) => acc + (cv.stats ? cv.stats.audioCompletes : 0), 0);
+  // Agrégats réels depuis cv.stats (rempli par normalizeCv depuis la table Supabase)
+  const sum = (key) => cvs.reduce((acc, cv) => acc + (cv.stats?.[key] || 0), 0);
+  const totalScans = sum('scans');
+  const totalAudioDem = sum('audioDemarrages');
+  const totalAudioComp = sum('audioCompletes');
+  const totalClicRetour = sum('clicRetour');
+
   const avgTime = cvs.length > 0
-    ? Math.round(cvs.reduce((acc, cv) => acc + (cv.stats ? cv.stats.avgTime : 0), 0) / cvs.length)
+    ? Math.round(cvs.reduce((acc, cv) => acc + (cv.stats?.avgTime || 0), 0) / cvs.length)
     : 0;
   const avgTimeFmt = avgTime > 0
     ? `${Math.floor(avgTime / 60)}:${String(avgTime % 60).padStart(2, '0')}`
     : '—';
+
+  // Taux retour recruteur = clics sur "Donner un retour" / scans totaux
+  const feedbackRate = totalScans > 0
+    ? ((totalClicRetour / totalScans) * 100).toFixed(1) + '%'
+    : '—';
+
+  // Taux de complétion audio (réutilisé dans la carte "Engagement audio")
   const audioRate = totalAudioDem > 0
     ? ((totalAudioComp / totalAudioDem) * 100).toFixed(1) + '%'
     : '—';
@@ -88,7 +98,8 @@ const Analytics = ({ cvs }) => {
   const totals = [
     { label: t("analytics.totalScans"), value: String(totalScans), trend: null },
     { label: t("analytics.avgTime"), value: avgTimeFmt, trend: null },
-    { label: t("analytics.feedbackRate"), value: audioRate, trend: null },
+    // Taux retour recruteur = ratio réel des clics sur "Donner un retour" / scans
+    { label: t("analytics.feedbackRate"), value: feedbackRate, trend: null },
   ];
 
   const engagement = [
@@ -97,12 +108,13 @@ const Analytics = ({ cvs }) => {
     { label: t("analytics.engagement.rate"), value: audioRate },
   ];
 
+  // Clics réels par canal (depuis cv.stats.click*)
   const clicks = [
-    { label: "WhatsApp", value: cvs.reduce((a, c) => a + (c.stat_clics_whatsapp || 0), 0), brand: "whatsapp" },
-    { label: "Gmail", value: cvs.reduce((a, c) => a + (c.stat_clics_email || 0), 0), brand: "gmail" },
-    { label: "LinkedIn", value: cvs.reduce((a, c) => a + (c.stat_clics_linkedin || 0), 0), brand: "linkedin" },
-    { label: "Instagram", value: cvs.reduce((a, c) => a + (c.stat_clics_instagram || 0), 0), brand: "instagram" },
-    { label: lang === "es" ? "Sitio web" : "Site web", value: cvs.reduce((a, c) => a + (c.stat_clics_site_web || 0), 0), icon: "Globe" },
+    { label: "WhatsApp", value: sum('clicWhatsapp'), brand: "whatsapp" },
+    { label: "Gmail", value: sum('clicEmail'), brand: "gmail" },
+    { label: "LinkedIn", value: sum('clicLinkedin'), brand: "linkedin" },
+    { label: "Instagram", value: sum('clicInstagram'), brand: "instagram" },
+    { label: lang === "es" ? "Sitio web" : "Site web", value: sum('clicSiteWeb'), icon: "Globe" },
   ];
   const maxClicks = Math.max(...clicks.map((c) => c.value), 1);
 

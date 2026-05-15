@@ -15,9 +15,10 @@ const ExchangeModal = ({ open, onClose, cv, user, toast }) => {
   const submit = (e) => {
     e.preventDefault();
     if (cv && cv.short_code) api.incrementStat(cv.short_code, 'clic_echange');
+    const dateLabel = f.date ? fmtDateTimeFr(f.date) : "—";
     const subject = encodeURIComponent(`Demande d'échange — CV de ${user.firstName} ${user.lastName}`);
     const body = encodeURIComponent(
-      `Bonjour ${user.firstName},\n\nNous avons consulté votre CV digital et souhaitons échanger avec vous.\n\nEntreprise : ${f.company || "—"}\nRecruteur : ${f.recruiter || "—"}\nDate souhaitée : ${f.date || "—"}\nCommentaire : ${f.note || "—"}\n\nCordialement.`
+      `Bonjour ${user.firstName},\n\nNous avons consulté votre CV digital et souhaitons échanger avec vous.\n\nEntreprise : ${f.company || "—"}\nRecruteur : ${f.recruiter || "—"}\nDate et heure souhaitées : ${dateLabel}\nCommentaire : ${f.note || "—"}\n\nCordialement.`
     );
     window.open(`mailto:${user.email}?subject=${subject}&body=${body}`, "_blank");
     toast(t("public.mailOpened"));
@@ -34,7 +35,9 @@ const ExchangeModal = ({ open, onClose, cv, user, toast }) => {
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Field label={t("public.company")}><input className="input" value={f.company} onChange={(e) => setF({ ...f, company: e.target.value })} placeholder="ex. Hôtel Lutetia" /></Field>
           <Field label={t("public.recruiter")}><input className="input" value={f.recruiter} onChange={(e) => setF({ ...f, recruiter: e.target.value })} placeholder={t("public.recruiterPh")} /></Field>
-          <Field label={t("public.date")}><input className="input" type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
+          <Field label="Date et heure de rendez-vous">
+            <DateTimePicker value={f.date} onChange={(v) => setF({ ...f, date: v })}/>
+          </Field>
           <Field label={t("public.comment")}><textarea className="input textarea" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder={t("public.commentPh")} /></Field>
           <button className="btn btn--primary btn--lg" type="submit"><I.Check size={14} /> {t("public.validate")}</button>
         </form>
@@ -380,15 +383,15 @@ const PublicPage = ({ shortCode, navigate }) => {
 
   return (
     <div data-no-chrome style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
-      {/* Header — Brand + badge rapprochés (max-width centré) et plus grands */}
+      {/* Header — Brand + badge taille mesurée, rapprochés via max-width centré */}
       <header style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
         <div style={{
-          width: '100%', maxWidth: 1200, padding: '26px 48px',
+          width: '100%', maxWidth: 1100, padding: '22px 44px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           boxSizing: 'border-box',
         }}>
-          <Brand size={22}/>
-          <span className="badge badge--green badge--dot" style={{ fontSize: 14, padding: '7px 16px', letterSpacing: '0.02em' }}>
+          <Brand size={18}/>
+          <span className="badge badge--green badge--dot" style={{ fontSize: 12, padding: '5px 13px' }}>
             {t("public.scanned")}
           </span>
         </div>
@@ -409,8 +412,8 @@ const PublicPage = ({ shortCode, navigate }) => {
       <ExchangeModal open={exchange} onClose={() => setExchange(false)} cv={cv} user={user} toast={show} />
       <FeedbackModal open={feedback} onClose={() => setFeedback(false)} cv={cv} user={user} toast={show} />
 
-      {/* Modal "CV complet" — XL avec zoom canvas-style */}
-      <Modal open={viewerOpen} onClose={() => setViewerOpen(false)} width={1500}>
+      {/* Modal "CV complet" — taille équilibrée + zoom canvas-style */}
+      <Modal open={viewerOpen} onClose={() => setViewerOpen(false)} width={1100}>
         <div style={{ padding: 30 }}>
           <div className="eyebrow" style={{ marginBottom: 8 }}>{cv.name}</div>
           <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: "0 0 6px" }}>{t("public.cvComplete")}</h2>
