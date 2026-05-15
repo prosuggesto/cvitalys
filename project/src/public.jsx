@@ -216,10 +216,15 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
         }
       </div>
 
-      {/* Audio player */}
+      {/* Audio player — composant unifié */}
       <div style={{ marginTop: 16 }}>
         {cv.audio_url
-          ? <PublicAudioPlayer audioUrl={cv.audio_url} shortCode={shortCode}/>
+          ? <AudioPlayerCustom
+              src={cv.audio_url}
+              label={t("public.audioLabel")}
+              onPlay={() => shortCode && api.incrementStat(shortCode, 'audio_demarre')}
+              onComplete={() => shortCode && api.incrementStat(shortCode, 'audio_complet')}
+            />
           : <SimulatedAudioPlayer duration={cv.audio?.duration || "1:08"}/>
         }
       </div>

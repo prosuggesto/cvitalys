@@ -138,14 +138,18 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
     Promise.all([resolvePoste, resolveSecteur])
       .then(([posteId, secteurId]) => api.createCv(userId, { nom_cv: f.name, poste_id: posteId, secteur_id: secteurId }))
       .then((newCv) => {
+        const final = { ...newCv };
         const uploads = [];
         if (f.file) uploads.push(
           imageToWebP(f.file)
-            .then((webp) => api.uploadCvFile(userId, newCv.dbId, webp))
-            .then((url) => { newCv.cv_url = url; newCv.hasFile = true; })
+            .then((webp) => api.uploadCvFile(userId, final.dbId, webp))
+            .then((url) => { final.cv_url = url; final.hasFile = true; })
         );
-        if (f.audioBlob) uploads.push(api.uploadAudio(userId, newCv.dbId, f.audioBlob).then((url) => { newCv.audio_url = url; newCv.audio = { url }; }));
-        return Promise.all(uploads).then(() => newCv);
+        if (f.audioBlob) uploads.push(
+          api.uploadAudio(userId, final.dbId, f.audioBlob)
+            .then((url) => { final.audio_url = url; final.audio = { url }; })
+        );
+        return Promise.all(uploads).then(() => final);
       })
       .then((newCv) => { setSaving(false); onCreate(newCv); })
       .catch((err) => { setSaving(false); setError(err.message || "Une erreur est survenue lors de la création du CV."); });
@@ -260,6 +264,8 @@ const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
           setCvs([...cvs, newCv]);
           setAddOpen(false);
           toast(t("cvs.created"));
+          // Redirige directement vers Personnalisation avec CV + audio déjà chargés
+          navigate(`/app/customize/${newCv.id}`);
         }}
       />
     </div>

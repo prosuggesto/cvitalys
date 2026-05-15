@@ -326,39 +326,80 @@ const ComboboxField = ({ label, value, onChange, items = [], onCreate, placehold
 };
 
 // ---------------------------------------------------------------------------
-// AudioPlayerCustom — custom player that handles WebM files (no duration meta)
+// AudioPlayerCustom — player unifié utilisé partout (Personnalisation, Preview, Public)
+// • Style premium identique partout
+// • Fix WebM/Opus duration === Infinity via seek-hack
+// • Props optionnelles : label, onPlay, onComplete (stats tracking)
 // ---------------------------------------------------------------------------
-const AudioPlayerCustom = ({ src, knownDuration = 0 }) => {
+const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onComplete }) => {
   const audioRef = useRef();
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(knownDuration);
+  const playedRef = useRef(false);
 
-  useEffect(() => { setCurrentTime(0); setPlaying(false); setDuration(knownDuration); }, [src, knownDuration]);
+  useEffect(() => {
+    setCurrentTime(0);
+    setPlaying(false);
+    setDuration(knownDuration);
+    playedRef.current = false;
+  }, [src, knownDuration]);
 
   useEffect(() => {
     const a = audioRef.current;
-    if (!a) return;
+    if (!a || !src) return;
+    let durationFixed = false;
+
+    const tryFixWebmDuration = () => {
+      // Si duration est Infinity ou NaN (typique des WebM/Opus MediaRecorder),
+      // on force le navigateur à scanner tout le fichier en seekant à 1e10
+      if (durationFixed) return;
+      if (!isFinite(a.duration)) {
+        durationFixed = true;
+        const onProbe = () => {
+          a.removeEventListener('timeupdate', onProbe);
+          try { a.currentTime = 0; } catch (e) {}
+          if (isFinite(a.duration) && a.duration > 0) setDuration(a.duration);
+        };
+        a.addEventListener('timeupdate', onProbe);
+        try { a.currentTime = 1e10; } catch (e) {}
+      }
+    };
+
     const onTime = () => setCurrentTime(a.currentTime);
-    const onMeta = () => { if (isFinite(a.duration) && a.duration > 0) setDuration(a.duration); };
-    const onEnded = () => { setPlaying(false); setCurrentTime(0); };
+    const onMeta = () => {
+      if (isFinite(a.duration) && a.duration > 0) setDuration(a.duration);
+      else tryFixWebmDuration();
+    };
+    const onEnded = () => {
+      setPlaying(false);
+      setCurrentTime(0);
+      if (onComplete) onComplete();
+    };
+
     a.addEventListener('timeupdate', onTime);
     a.addEventListener('loadedmetadata', onMeta);
     a.addEventListener('durationchange', onMeta);
     a.addEventListener('ended', onEnded);
+
     return () => {
       a.removeEventListener('timeupdate', onTime);
       a.removeEventListener('loadedmetadata', onMeta);
       a.removeEventListener('durationchange', onMeta);
       a.removeEventListener('ended', onEnded);
     };
-  }, [src]);
+  }, [src, onComplete]);
 
   const toggle = () => {
     const a = audioRef.current;
     if (!a) return;
     if (playing) { a.pause(); setPlaying(false); }
-    else { a.play().then(() => setPlaying(true)).catch(() => {}); }
+    else {
+      a.play().then(() => {
+        setPlaying(true);
+        if (!playedRef.current && onPlay) { onPlay(); playedRef.current = true; }
+      }).catch(() => {});
+    }
   };
 
   const seek = (e) => {
@@ -374,21 +415,25 @@ const AudioPlayerCustom = ({ src, knownDuration = 0 }) => {
   const pct = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--bg-soft)', borderRadius: 10, border: '1px solid var(--border)' }}>
+    <div style={{ padding: 18, background: 'var(--surface-2)', borderRadius: 18, border: '1px solid var(--border-soft)' }}>
       <audio ref={audioRef} src={src} preload="metadata"/>
-      <button type="button" onClick={toggle} style={{
-        width: 34, height: 34, borderRadius: '50%', background: 'var(--ink)', color: '#fff',
-        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        {playing ? <I.Pause size={13}/> : <I.Play size={13}/>}
-      </button>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, cursor: 'pointer' }} onClick={seek}>
-          <div style={{ width: pct + '%', height: '100%', background: 'var(--gold-deep)', borderRadius: 2, transition: 'width 0.25s linear' }}/>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--muted)' }}>
-          <span>{fmt(currentTime)}</span>
-          <span>{fmt(duration)}</span>
+      <div className="row gap-12">
+        <button type="button" className="audio-play" onClick={toggle} style={{ width: 44, height: 44 }}>
+          {playing ? <I.Pause size={14}/> : <I.Play size={14}/>}
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {label && (
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              {label}
+            </div>
+          )}
+          <div className="audio-bar" onClick={seek} style={{ cursor: 'pointer' }}>
+            <div className="audio-bar__progress" style={{ width: pct + '%' }}/>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+            <span className="audio-time">{fmt(currentTime)}</span>
+            <span className="audio-time">{fmt(duration)}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -500,9 +545,9 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
 
 // ---------------------------------------------------------------------------
 // imageToWebP — convertit une image (JPEG/PNG/WebP) en Blob WebP compressé
-// Redimensionne si plus large que maxWidth pour garder un fichier léger.
+// Qualité haute (95%) + max 2400px pour garder une image très nette.
 // ---------------------------------------------------------------------------
-function imageToWebP(file, maxWidth = 1600, quality = 0.88) {
+function imageToWebP(file, maxWidth = 2400, quality = 0.95) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
