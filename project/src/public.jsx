@@ -291,9 +291,9 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
             <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
               {cv.buttons.whatsapp && <SecondaryContactBtn brand="whatsapp" label="WhatsApp" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_whatsapp'); const wa = (cv.contact.whatsapp || user.phone || '').replace(/\D/g, ''); window.open(`https://wa.me/${wa}`); }} />}
               {cv.buttons.email && <SecondaryContactBtn brand="gmail" label="Email" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_email'); window.open(`mailto:${cv.contact.email || user.email}`); }} />}
-              {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_linkedin'); const url = cv.contact.linkedin; if (url) window.open(url, '_blank'); }} />}
-              {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_instagram'); const url = cv.contact.instagram; if (url) window.open(url, '_blank'); }} />}
-              {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_site_web'); const url = cv.contact.website; if (url) window.open(url, '_blank'); }} />}
+              {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_linkedin'); const url = cv.contact.linkedin; if (url) window.location.href = url; }} />}
+              {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_instagram'); const url = cv.contact.instagram; if (url) window.location.href = url; }} />}
+              {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_site_web'); const url = cv.contact.website; if (url) window.location.href = url; }} />}
             </div>
           </div>
         }
