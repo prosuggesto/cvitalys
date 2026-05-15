@@ -61,12 +61,12 @@ const api = {
 
   // ---- AUTH ----------------------------------------------------------------
 
-  signUp(email, password, prenom, nom) {
+  signUp(email, password, prenom, nom, telephone) {
     return sb.auth.signUp({
       email,
       password,
       options: {
-        data: { prenom, nom },
+        data: { prenom, nom, telephone: telephone || '' },
       },
     });
   },
@@ -139,19 +139,6 @@ const api = {
       nom_cv: data.nom_cv || 'Nouveau CV',
       poste_id: data.poste_id || null,
       secteur_id: data.secteur_id || null,
-      email_contact: data.email_contact || null,
-      telephone_contact: data.telephone_contact || null,
-      numero_whatsapp: data.numero_whatsapp || null,
-      linkedin_url: data.linkedin_url || null,
-      instagram_url: data.instagram_url || null,
-      site_web_url: data.site_web_url || null,
-      afficher_bouton_echange: data.afficher_bouton_echange !== undefined ? data.afficher_bouton_echange : true,
-      afficher_bouton_retour: data.afficher_bouton_retour !== undefined ? data.afficher_bouton_retour : true,
-      afficher_bouton_email: data.afficher_bouton_email !== undefined ? data.afficher_bouton_email : true,
-      afficher_bouton_whatsapp: data.afficher_bouton_whatsapp !== undefined ? data.afficher_bouton_whatsapp : false,
-      afficher_bouton_linkedin: data.afficher_bouton_linkedin !== undefined ? data.afficher_bouton_linkedin : false,
-      afficher_bouton_instagram: data.afficher_bouton_instagram !== undefined ? data.afficher_bouton_instagram : false,
-      afficher_bouton_site_web: data.afficher_bouton_site_web !== undefined ? data.afficher_bouton_site_web : false,
       est_public: true,
     };
     return sb

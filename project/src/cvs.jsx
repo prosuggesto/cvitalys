@@ -115,11 +115,6 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
           nom_cv: f.name,
           poste_id: posteId,
           secteur_id: secteurId,
-          email_contact: MOCK.initialUser.email || null,
-          telephone_contact: MOCK.initialUser.phone || null,
-          afficher_bouton_echange: true,
-          afficher_bouton_retour: true,
-          afficher_bouton_email: true,
         });
       })
       .then((newCv) => {

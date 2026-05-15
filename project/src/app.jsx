@@ -43,9 +43,10 @@ function AppInner() {
           const meta = user.user_metadata || {};
           return sb.from('profils').upsert({
             id: userId,
-            prenom: meta.prenom || meta.first_name || '',
-            nom: meta.nom || meta.last_name || '',
+            prenom: meta.prenom || '',
+            nom: meta.nom || '',
             email: user.email || '',
+            telephone: meta.telephone || null,
           }, { onConflict: 'id' }).then(() => api.getProfile(userId));
         });
       })
