@@ -334,7 +334,6 @@ const Landing = ({ navigate }) => {
           </div>
           <div className="reveal reveal--d4" style={{ display: "flex", gap: 24, marginTop: 28, fontSize: 13, color: "var(--muted)" }}>
             <span className="row gap-8"><I.Check size={14} stroke="#6E8E78"/> {t("landing.hero.bullet1")}</span>
-            <span className="row gap-8"><I.Check size={14} stroke="#6E8E78"/> {t("landing.hero.bullet2")}</span>
           </div>
         </div>
         <div className="reveal reveal--d5">
@@ -379,7 +378,7 @@ const Landing = ({ navigate }) => {
 
       <section id="valeur" style={{ background: "var(--surface)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px", display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 56, alignItems: "flex-start" }}>
-          <div className="reveal" style={{ position: "sticky", top: 100 }}>
+          <div className="reveal">
             <div className="eyebrow">{t("landing.why.eyebrow")}</div>
             <h2 className="display" style={{ fontSize: 48, margin: "10px 0 18px", fontWeight: 500 }}>{t("landing.why.title1")} <em className="display-italic">{t("landing.why.title2")}</em> {t("landing.why.title3")}</h2>
             <p className="muted">{t("landing.why.intro")}</p>
