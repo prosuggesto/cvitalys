@@ -105,10 +105,29 @@ const QRDownloadModal = ({ cv, open, onClose }) => {
   const base = window.APP_URL || (window.location.origin + window.location.pathname);
   const url = cv.short_code ? `${base}#/cv/${cv.short_code}` : null;
 
+  const triggerDownload = (dataUrl, filename) => {
+    const link = document.createElement("a");
+    link.download = filename;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleDownload = () => {
-    if (!url || !window.QRCode) return;
+    if (!url) return;
     const palette = QR_PALETTES.find((p) => p.key === selected) || QR_PALETTES[0];
+    const filename = `QR_CVitalis_${(cv.name || "cv").replace(/\s+/g, "_")}.jpeg`;
     setDownloading(true);
+
+    if (!window.QRCode) {
+      // Fallback API
+      const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(url)}&margin=3&color=${palette.dark.replace("#","")}&bgcolor=${palette.light.replace("#","")}`;
+      triggerDownload(apiUrl, filename);
+      setDownloading(false);
+      return;
+    }
+
     const canvas = document.createElement("canvas");
     QRCode.toCanvas(canvas, url, {
       width: 512,
@@ -117,10 +136,15 @@ const QRDownloadModal = ({ cv, open, onClose }) => {
     }, (err) => {
       setDownloading(false);
       if (err) { alert("Erreur lors de la génération du QR."); return; }
-      const link = document.createElement("a");
-      link.download = `QR_CVitalis_${(cv.name || "cv").replace(/\s+/g, "_")}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+      // Dessiner fond coloré (nécessaire pour JPEG sans transparence)
+      const out = document.createElement("canvas");
+      out.width = canvas.width;
+      out.height = canvas.height;
+      const ctx = out.getContext("2d");
+      ctx.fillStyle = palette.light;
+      ctx.fillRect(0, 0, out.width, out.height);
+      ctx.drawImage(canvas, 0, 0);
+      triggerDownload(out.toDataURL("image/jpeg", 0.95), filename);
     });
   };
 
