@@ -2,23 +2,32 @@
 
 const CustomizeSelectCard = ({ cv, onClick }) => {
   const { t } = useT();
+  const isMobile = useIsMobile();
   return (
-    <div className="card" onClick={onClick} style={{ padding: 28, cursor: "pointer", display: "flex", flexDirection: "column", gap: 20, transition: "transform .2s, box-shadow .2s" }}
+    <div className="card" onClick={onClick} style={{
+      padding: isMobile ? 18 : 28,
+      cursor: "pointer", display: "flex", flexDirection: "column",
+      gap: isMobile ? 14 : 20,
+      transition: "transform .2s, box-shadow .2s",
+      maxWidth: isMobile ? 340 : "none",
+      margin: isMobile ? "0 auto" : undefined,
+      width: isMobile ? "100%" : undefined,
+    }}
     onMouseEnter={(e) => {e.currentTarget.style.transform = "translateY(-2px)";e.currentTarget.style.boxShadow = "var(--shadow-lift)";}}
     onMouseLeave={(e) => {e.currentTarget.style.transform = "none";e.currentTarget.style.boxShadow = "var(--shadow-card)";}}>
     <div className="between" style={{ alignItems: "flex-start" }}>
-      <div>
-        <div className="display" style={{ fontSize: 24, fontStyle: "italic", fontWeight: 400 }}>{cv.name}</div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div className="display" style={{ fontSize: isMobile ? 20 : 24, fontStyle: "italic", fontWeight: 400 }}>{cv.name}</div>
         <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{cv.sector}</div>
       </div>
       <span className="badge">{cv.role}</span>
     </div>
-    <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 14px" }}>
+    <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "6px 0 10px" : "8px 0 14px" }}>
       {cv.cv_url
-        ? <ImagePreview url={cv.cv_url} width={260} float3d={true}/>
-        : <CVPreviewVisual cv={cv} scale={1.1} float3d={true}/>}
+        ? <ImagePreview url={cv.cv_url} width={isMobile ? 200 : 260} float3d={true}/>
+        : <CVPreviewVisual cv={cv} scale={isMobile ? 0.8 : 1.1} float3d={true}/>}
     </div>
-    <div className="between">
+    <div className="between" style={{ flexWrap: "wrap", gap: 8 }}>
       <span className="muted" style={{ fontSize: 13 }}>{t("custom.select.click")}</span>
       <span className="row gap-8" style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>
         <I.Brush size={14} /> {t("custom.select.btn")} <I.Arrow size={14} />
@@ -29,13 +38,14 @@ const CustomizeSelectCard = ({ cv, onClick }) => {
 
 const CustomizeSelect = ({ cvs, navigate }) => {
   const { t } = useT();
+  const isMobile = useIsMobile();
   return (
     <div className="page">
     <PageHeader
         eyebrow={t("custom.select.eyebrow")}
         title={t("custom.select.title")}
         subtitle={t("custom.select.sub")} />
-    <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 20 }}>
+    <div className="grid" style={{ gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(380px, 1fr))", gap: isMobile ? 16 : 20 }}>
       {cvs.map((cv) =>
         <CustomizeSelectCard key={cv.id} cv={cv} onClick={() => navigate(`/app/customize/${cv.id}`)} />
       )}
@@ -62,6 +72,7 @@ const ButtonToggleRow = ({ label, icon, brand, on, onChange, children }) => {
 
 const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigate }) => {
   const { t } = useT();
+  const isMobile = useIsMobile();
   const [local, setLocal] = useState(cv);
   const [saving, setSaving] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
@@ -216,7 +227,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
         title={local.name}
         subtitle={t("custom.edit.sub")}
         action={
-        <div className="row gap-8">
+        <div className="row gap-8" style={{ flexWrap: "wrap" }}>
             <button className="btn btn--secondary" onClick={() => navigate("/app/customize")}>← {t("common.back")}</button>
             <button className="btn btn--secondary" disabled={saving} onClick={() => handleSave().then(() => onPreview(local)).catch(() => {})}>
               <I.Eye size={14} /> {t("common.preview")}
@@ -227,12 +238,12 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
           </div>
         } />
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.05fr) minmax(0, 1fr)", gap: 28, alignItems: "flex-start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.05fr) minmax(0, 1fr)", gap: isMobile ? 16 : 28, alignItems: "flex-start" }}>
         {/* Colonne gauche : PDF + Audio */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20, position: "sticky", top: 92 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 16 : 20, position: isMobile ? "static" : "sticky", top: 92 }}>
 
           {/* Section CV */}
-          <div className="card" style={{ padding: 32 }}>
+          <div className="card" style={{ padding: isMobile ? 18 : 32 }}>
             <div className="between" style={{ marginBottom: 18 }}>
               <h3 className="display" style={{ margin: 0, fontSize: 22, fontWeight: 500 }}>{t("custom.cvSection")}</h3>
               <span className="badge badge--neutral">{local.hasFile ? t("custom.cvImported") : t("custom.cvNone")}</span>
@@ -282,7 +293,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
           </div>
 
           {/* Section Audio */}
-          <div className="card" style={{ padding: 24 }}>
+          <div className="card" style={{ padding: isMobile ? 16 : 24 }}>
             <div className="between" style={{ marginBottom: 14 }}>
               <h3 className="display" style={{ margin: 0, fontSize: 22, fontWeight: 500 }}>{t("custom.audioSection")}</h3>
               <I.Mic size={18} stroke="var(--muted)" />
@@ -296,16 +307,16 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
         </div>
 
         {/* Colonne droite : Infos + Boutons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 16 : 20 }}>
 
           {/* Infos générales */}
-          <div className="card" style={{ padding: 28 }}>
+          <div className="card" style={{ padding: isMobile ? 18 : 28 }}>
             <h3 className="display" style={{ margin: "0 0 18px", fontSize: 22, fontWeight: 500 }}>{t("custom.infoSection")}</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <Field label={t("common.cvName")}>
                 <input className="input" value={local.name} onChange={(e) => update({ name: e.target.value })} />
               </Field>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
                 <ComboboxField
                   label={t("common.role")}
                   value={roleItem}
@@ -344,7 +355,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
           </div>
 
           {/* Boutons visibles */}
-          <div className="card" style={{ padding: 28 }}>
+          <div className="card" style={{ padding: isMobile ? 18 : 28 }}>
             <h3 className="display" style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 500 }}>{t("custom.buttonsSection")}</h3>
             <p className="muted" style={{ margin: "0 0 10px", fontSize: 13 }}>{t("custom.buttonsSub")}</p>
 
@@ -377,24 +388,29 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
           </div>
 
           {/* Boîte prévisualisation / sauvegarde */}
-          <div className="card card--soft" style={{ padding: 22, display: "flex", gap: 14, alignItems: "center", justifyContent: "space-between" }}>
+          <div className="card card--soft" style={{
+            padding: isMobile ? 16 : 22,
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            gap: 14,
+            alignItems: isMobile ? "stretch" : "center",
+            justifyContent: "space-between"
+          }}>
             <div>
               <div style={{ fontWeight: 500 }}>{t("custom.previewBox.title")}</div>
               <div className="muted" style={{ fontSize: 13 }}>{t("custom.previewBox.sub")}</div>
             </div>
-            <div className="row gap-8">
-              <button className="btn btn--secondary" disabled={saving} onClick={() => handleSave().then(() => onPreview(local)).catch(() => {})}>
+            <div className="row gap-8" style={{ flexWrap: "wrap" }}>
+              <button className="btn btn--secondary" disabled={saving} onClick={() => handleSave().then(() => onPreview(local)).catch(() => {})} style={isMobile ? { flex: 1 } : undefined}>
                 <I.Eye size={14} /> {t("common.preview")}
               </button>
-              <button className="btn btn--primary" onClick={() => handleSave()} disabled={saving}>
+              <button className="btn btn--primary" onClick={() => handleSave()} disabled={saving} style={isMobile ? { flex: 1 } : undefined}>
                 {saving ? "Sauvegarde…" : t("common.save")}
               </button>
             </div>
           </div>
         </div>
       </div>
-
-      <style>{`@media (max-width: 1000px) { .page > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; } .page > div > div:first-child { position: static !important; } }`}</style>
     </div>);
 };
 

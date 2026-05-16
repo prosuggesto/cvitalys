@@ -614,14 +614,49 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
   };
 
   const start = () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Votre navigateur ne supporte pas l'enregistrement audio.");
+      return;
+    }
+    if (typeof MediaRecorder === "undefined") {
+      alert("Votre navigateur ne supporte pas l'enregistrement audio (MediaRecorder).");
+      return;
+    }
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then((stream) => {
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-        const mr = new MediaRecorder(stream, { mimeType });
+        // iOS Safari ne supporte PAS audio/webm — uniquement audio/mp4.
+        // On essaie dans l'ordre du meilleur au plus compatible.
+        const candidates = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/mp4;codecs=mp4a.40.2",
+          "audio/mp4",
+          "audio/aac",
+        ];
+        let mimeType = "";
+        for (const c of candidates) {
+          if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c)) {
+            mimeType = c;
+            break;
+          }
+        }
+        let mr;
+        try {
+          mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        } catch (e) {
+          // Dernier recours : sans mimeType, le navigateur choisit lui-même
+          try { mr = new MediaRecorder(stream); }
+          catch (_) {
+            stream.getTracks().forEach((t) => t.stop());
+            alert("Format audio non supporté sur ce navigateur.");
+            return;
+          }
+        }
+        const effectiveMime = mr.mimeType || mimeType || "audio/webm";
         chunksRef.current = [];
         mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
         mr.onstop = () => {
-          const blob = new Blob(chunksRef.current, { type: mimeType });
+          const blob = new Blob(chunksRef.current, { type: effectiveMime });
           const url = URL.createObjectURL(blob);
           setPreviewUrl(url);
           setRecordedDuration(elapsedRef.current);
@@ -642,8 +677,15 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
           });
         }, 1000);
       })
-      .catch(() => {
-        alert("Impossible d'accéder au microphone. Vérifiez les permissions.");
+      .catch((err) => {
+        const name = err && err.name ? err.name : "";
+        if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+          alert("Accès au microphone refusé. Autorisez-le dans les réglages de votre navigateur.");
+        } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+          alert("Aucun microphone détecté sur cet appareil.");
+        } else {
+          alert("Impossible d'accéder au microphone. Vérifiez les permissions.");
+        }
       });
   };
 
