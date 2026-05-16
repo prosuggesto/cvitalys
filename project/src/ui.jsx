@@ -33,21 +33,24 @@ const Field = ({ label, children, hint }) => (
 );
 
 // QRBlock — génère un vrai QR code via la lib QRCode (CDN)
+// Utilise toDataURL (Promise) plutôt que toCanvas pour éviter les problèmes de timing avec le DOM
 const QRBlock = ({ size = 200, url }) => {
-  const canvasRef = useRef();
+  const [imgSrc, setImgSrc] = useState('');
   useEffect(() => {
-    if (!canvasRef.current) return;
-    if (url && window.QRCode) {
-      QRCode.toCanvas(
-        canvasRef.current,
-        url,
-        { width: size, margin: 2, color: { dark: '#1B1814', light: '#ffffff' } },
-        () => {}
-      );
-    }
+    if (!url) { setImgSrc(''); return; }
+    const gen = () => {
+      if (!window.QRCode || !QRCode.toDataURL) return;
+      QRCode.toDataURL(url, {
+        width: size,
+        margin: 2,
+        color: { dark: '#1B1814', light: '#ffffff' },
+      }).then(setImgSrc).catch((err) => console.warn('QR generation failed:', err));
+    };
+    // Petite attente pour s'assurer que la lib CDN est bien chargée
+    if (window.QRCode) { gen(); } else { setTimeout(gen, 300); }
   }, [url, size]);
-  if (!url) return <div style={{ width: size, height: size, background: "var(--bg-soft)", borderRadius: 8 }}/>;
-  return <canvas ref={canvasRef} style={{ borderRadius: 8 }}/>;
+  if (!imgSrc) return <div style={{ width: size, height: size, background: "var(--bg-soft)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ width: 24, height: 24, border: "2px solid var(--border)", borderTopColor: "var(--gold-deep)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }}/></div>;
+  return <img src={imgSrc} width={size} height={size} alt="QR Code" style={{ display: "block", borderRadius: 8 }}/>;
 };
 
 // Realistic A4 CV preview (PDF-style, two-column). Uses transform: scale() so
