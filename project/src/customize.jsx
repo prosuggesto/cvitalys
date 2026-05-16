@@ -82,6 +82,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
   const [secteurs, setSecteurs] = useState([]);
   const [roleItem, setRoleItem] = useState({ id: cv?.poste_id || null, nom: cv?.role || '' });
   const [secteurItem, setSecteurItem] = useState({ id: cv?.secteur_id || null, nom: cv?.sector || '' });
+  const [viewerOpen, setViewerOpen] = useState(false);
   const fileInputRef = useRef();
 
   useEffect(() => {
@@ -259,12 +260,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
                   <button className="btn btn--secondary btn--sm" onClick={() => fileInputRef.current.click()}>
                     <I.Upload size={14} /> {t("common.replace")}
                   </button>
-                  <button className="btn btn--ghost btn--sm" onClick={() => {
-                    // Sécurité : refuse les schemes non http(s) (anti javascript:/data:)
-                    if (typeof displayImageUrl === 'string' && /^https?:\/\//i.test(displayImageUrl)) {
-                      window.open(displayImageUrl, '_blank', 'noopener,noreferrer');
-                    }
-                  }}>
+                  <button className="btn btn--ghost btn--sm" onClick={() => setViewerOpen(true)}>
                     <I.Eye size={14} /> {t("common.fullscreen")}
                   </button>
                   <input type="file" accept="image/jpeg,image/png,image/webp" ref={fileInputRef} hidden onChange={(e) => {
@@ -411,6 +407,23 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
           </div>
         </div>
       </div>
+
+      {/* Modal "CV complet" — identique à la page publique (Voir le CV) */}
+      <Modal open={viewerOpen} onClose={() => setViewerOpen(false)} width={1100}>
+        <div style={{ padding: 30 }}>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>{local.name}</div>
+          <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: "0 0 6px" }}>{t("public.cvComplete")}</h2>
+          <p className="muted" style={{ margin: "0 0 18px", fontSize: 13 }}>
+            <kbd style={{ padding: '2px 6px', background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11 }}>Ctrl</kbd> + molette pour zoomer · cliquer-glisser pour déplacer · double-clic pour réinitialiser
+          </p>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            {displayImageUrl
+              ? <ZoomableImage src={displayImageUrl}/>
+              : <CVPreviewVisual cv={local} scale={2.1} />
+            }
+          </div>
+        </div>
+      </Modal>
     </div>);
 };
 
