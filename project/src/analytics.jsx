@@ -97,7 +97,7 @@ const InteractionsTable = ({ interactions, lang }) => {
                 <td style={{ padding: "14px 12px 14px 0", verticalAlign: "top" }}>
                   <div style={{ fontWeight: 500, color: "var(--ink)" }}>{it.recruteur || anonymous}</div>
                   {it.entreprise && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{it.entreprise}</div>}
-                  {it.cv_name && <div className="muted" style={{ fontSize: 10.5, marginTop: 4, letterSpacing: "0.08em", textTransform: "uppercase" }}>{it.cv_name}</div>}
+                  {it.cv_name && <div className="muted" style={{ fontSize: 10.5, marginTop: 4, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{it.cv_name}</div>}
                 </td>
                 <td style={{ padding: "14px 12px", verticalAlign: "top" }}>
                   <span style={{

@@ -225,7 +225,7 @@ const AnalyticsPreview = () => {
                     <td style={{ padding: "14px 12px 14px 0", verticalAlign: "top" }}>
                       <div style={{ fontWeight: 500, color: "var(--ink)" }}>{it.name}</div>
                       <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{it.company}</div>
-                      <div className="muted" style={{ fontSize: 10.5, marginTop: 4, letterSpacing: "0.08em", textTransform: "uppercase" }}>{it.cv_name}</div>
+                      <div className="muted" style={{ fontSize: 10.5, marginTop: 4, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{it.cv_name}</div>
                     </td>
                     <td style={{ padding: "14px 12px", verticalAlign: "top" }}>
                       <span style={{
@@ -373,8 +373,8 @@ const Landing = ({ navigate }) => {
         </div>
       </section>
 
-      <section id="valeur" style={{ background: "var(--surface)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px", display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 56, alignItems: "flex-start" }}>
+      <section id="valeur" style={{ background: "linear-gradient(to bottom, var(--bg) 0px, var(--surface) 90px, var(--surface) calc(100% - 90px), var(--bg) 100%)" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "120px 32px", display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 56, alignItems: "flex-start" }}>
           <div className="reveal" style={{ position: "sticky", top: 100, alignSelf: "start" }}>
             <div className="eyebrow">{t("landing.why.eyebrow")}</div>
             <h2 className="display" style={{ fontSize: 48, margin: "10px 0 18px", fontWeight: 500 }}>{t("landing.why.title1")} <em className="display-italic">{t("landing.why.title2")}</em> {t("landing.why.title3")}</h2>
