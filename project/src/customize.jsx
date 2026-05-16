@@ -122,12 +122,34 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
       const userId = session.user.id;
       const cvId = local.dbId;
 
+      // Validation/normalisation des URLs au save (defense-in-depth, en plus du
+      // filtre au render). Si l'utilisateur a tapé n'importe quoi, on stocke null
+      // au lieu d'une URL dangereuse. Le toast prévient si une valeur a été ignorée.
+      const linkedinClean = local.contact.linkedin
+        ? safeDomainUrl(local.contact.linkedin, LINKEDIN_DOMAINS, "www.linkedin.com/in")
+        : null;
+      const instagramClean = local.contact.instagram
+        ? safeDomainUrl(local.contact.instagram, INSTAGRAM_DOMAINS, "www.instagram.com")
+        : null;
+      const websiteClean = local.contact.website
+        ? safeExternalUrl(local.contact.website)
+        : null;
+
+      // Notifier l'utilisateur si une URL a été rejetée (sans bloquer le save)
+      const rejected = [];
+      if (local.contact.linkedin && !linkedinClean) rejected.push("LinkedIn");
+      if (local.contact.instagram && !instagramClean) rejected.push("Instagram");
+      if (local.contact.website && !websiteClean) rejected.push("Site web");
+      if (rejected.length > 0) {
+        toast(`URL(s) ignorée(s) : ${rejected.join(", ")} (format invalide)`);
+      }
+
       // Email/téléphone/WhatsApp lus depuis profils à l'affichage — pas stockés dans cvs
       const dbUpdates = {
         nom_cv: local.name,
-        linkedin_url: local.contact.linkedin || null,
-        instagram_url: local.contact.instagram || null,
-        site_web_url: local.contact.website || null,
+        linkedin_url: linkedinClean,
+        instagram_url: instagramClean,
+        site_web_url: websiteClean,
         afficher_bouton_echange: local.buttons.exchange,
         afficher_bouton_retour: local.buttons.feedback,
         afficher_bouton_email: local.buttons.email,

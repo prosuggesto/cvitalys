@@ -50,7 +50,7 @@ const Analytics = ({ cvs }) => {
     api.getStatsGlobales(userId)
       .then(rows => { setStatsGlobales(rows); setLoadingStats(false); })
       .catch((err) => {
-        console.warn('[Analytics] getStatsGlobales failed:', err);
+        if (window.logWarn) window.logWarn('[Analytics] getStatsGlobales failed:', err);
         setStatsGlobales(null);
         setLoadingStats(false);
       });

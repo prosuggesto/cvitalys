@@ -1,71 +1,7 @@
 // Page publique CV (vue recruteur après scan) + tracking stats + NFC redirect
-
-// Helpers de sécurité — empêchent les attaques XSS via javascript:/data:/vbscript:
-// dans les champs "URL" que l'utilisateur saisit (linkedin, instagram, site web).
-// Toute URL non http(s) est rejetée. Si pas de scheme, on préfixe https://.
-const safeExternalUrl = (raw) => {
-  if (typeof raw !== "string") return null;
-  const s = raw.trim();
-  if (!s) return null;
-  // Si l'utilisateur a tapé "monsite.com" sans scheme, on ajoute https://
-  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(s) ? s : `https://${s}`;
-  try {
-    const u = new URL(withScheme);
-    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
-    return u.toString();
-  } catch (_) {
-    return null;
-  }
-};
-// Sanitise une adresse email pour usage dans un mailto: (anti-header-injection).
-// Refuse tout caractère hors RFC simplifiée ; null si invalide.
-const safeMailtoTarget = (raw) => {
-  if (typeof raw !== "string") return null;
-  const s = raw.trim();
-  // Pattern strict : pas de \r, \n, espace, virgule, etc.
-  if (!/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(s)) return null;
-  return s;
-};
-
-// Whitelist par domaine : protège contre l'impersonation (faux site qui imite
-// LinkedIn). Accepte la racine ET les sous-domaines (www.linkedin.com OK,
-// linkdin-phishing.com REJETÉ). Si l'utilisateur entre juste son pseudo,
-// on construit l'URL vers le domaine principal.
-const LINKEDIN_DOMAINS  = ["linkedin.com", "linkd.in", "linked.in"];
-const INSTAGRAM_DOMAINS = ["instagram.com", "ig.me", "instagr.am"];
-
-const matchesDomain = (hostname, allowed) => {
-  const h = hostname.toLowerCase();
-  return allowed.some((d) => h === d || h.endsWith("." + d));
-};
-
-// safeDomainUrl(raw, allowed, defaultDomain) :
-// - Si raw est une URL → vérifie que le domaine est dans la whitelist
-// - Si raw est juste un pseudo (sans / et sans .) → construit https://defaultDomain/<pseudo>
-// - Retourne null si rien de valide
-const safeDomainUrl = (raw, allowed, defaultDomain) => {
-  if (typeof raw !== "string") return null;
-  const s = raw.trim();
-  if (!s) return null;
-
-  // Cas pseudo simple : ni "/" ni "." → on suppose que c'est un handle
-  if (!/[\/.]/.test(s)) {
-    const handle = s.replace(/^@/, "").replace(/[^A-Za-z0-9._\-]/g, "");
-    if (!handle) return null;
-    return `https://${defaultDomain}/${encodeURIComponent(handle)}`;
-  }
-
-  // Sinon, URL : valider scheme + domaine
-  const safe = safeExternalUrl(s);
-  if (!safe) return null;
-  try {
-    const u = new URL(safe);
-    if (!matchesDomain(u.hostname, allowed)) return null;
-    return safe;
-  } catch (_) {
-    return null;
-  }
-};
+// Helpers de sécurité (safeExternalUrl, safeMailtoTarget, safeDomainUrl,
+// LINKEDIN_DOMAINS, INSTAGRAM_DOMAINS) sont définis dans ui.jsx et exposés
+// sur window pour usage par customize.jsx et public.jsx.
 
 const SecondaryContactBtn = ({ icon, brand, label, onClick }) => {
   const Ico = icon ? I[icon] : null;

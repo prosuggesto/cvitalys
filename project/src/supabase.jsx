@@ -164,14 +164,16 @@ const api = {
   },
 
   updateCv(cvId, updates) {
-    // Convertir les clés "frontend" vers les clés DB si nécessaire
+    // Whitelist stricte des champs modifiables par le client.
+    // SÉCURITÉ : cv_url et audio_url SONT EXCLUS — ils ne doivent être modifiés
+    // que par uploadCvFile/uploadAudio (qui posent l'URL Supabase Storage).
+    // Sinon un attaquant pourrait via DevTools faire pointer cv_url vers
+    // attacker.com → fuite d'IP du recruteur, tracking, etc.
     const dbUpdates = {};
     const keyMap = {
       nom_cv: 'nom_cv',
       poste_id: 'poste_id',
       secteur_id: 'secteur_id',
-      cv_url: 'cv_url',
-      audio_url: 'audio_url',
       email_contact: 'email_contact',
       telephone_contact: 'telephone_contact',
       numero_whatsapp: 'numero_whatsapp',
@@ -210,11 +212,11 @@ const api = {
 
       const purgeBucket = (bucket) =>
         sb.storage.from(bucket).list(folder).then(({ data, error }) => {
-          if (error) { console.warn(`storage list failed (${bucket}):`, error.message); return; }
+          if (error) { if (window.logWarn) window.logWarn(`storage list failed (${bucket}):`, error.message); return; }
           if (!data || data.length === 0) return;
           const paths = data.map((f) => `${folder}/${f.name}`);
           return sb.storage.from(bucket).remove(paths).then(({ error: rmErr }) => {
-            if (rmErr) console.warn(`storage remove failed (${bucket}):`, rmErr.message);
+            if (rmErr && window.logWarn) window.logWarn(`storage remove failed (${bucket}):`, rmErr.message);
           });
         });
 
@@ -269,6 +271,15 @@ const api = {
   },
 
   uploadAudio(userId, cvId, blob) {
+    // Validation : type audio + taille raisonnable
+    if (!blob || typeof blob !== "object") return Promise.reject(new Error("Audio invalide"));
+    if (blob.type && !blob.type.startsWith("audio/")) {
+      return Promise.reject(new Error("Type de fichier invalide (audio attendu)"));
+    }
+    const MAX_AUDIO_BYTES = 8 * 1024 * 1024; // 8 MB — ~5 min de webm/opus
+    if (blob.size > MAX_AUDIO_BYTES) {
+      return Promise.reject(new Error("Audio trop volumineux (max 8 Mo)"));
+    }
     const path = `${userId}/${cvId}/audio.webm`;
     return sb.storage
       .from('audio-files')
@@ -297,7 +308,7 @@ const api = {
         p_secondes: secondes || 0,
       })
       .then(({ error }) => {
-        if (error) console.error('incrementStat error:', error);
+        if (error && window.logErr) window.logErr('incrementStat error:', error);
       });
   },
 
@@ -351,13 +362,37 @@ const api = {
   },
 
   updateNfcCard(nfcId, updates) {
-    return sb
-      .from('nfc_cv')
-      .update(updates)
-      .eq('id', nfcId)
-      .then(({ error }) => {
-        if (error) throw error;
+    // Whitelist : seuls cv_id et actif sont modifiables. SURTOUT pas utilisateur_id
+    // (transfert de propriété), code_court (collision), nfc_uid, etc.
+    const allowed = {};
+    if ('cv_id' in updates) allowed.cv_id = updates.cv_id;
+    if ('actif' in updates) allowed.actif = !!updates.actif;
+    if (Object.keys(allowed).length === 0) return Promise.resolve();
+
+    // Si on change le cv_id, vérifier que ce CV appartient bien à l'utilisateur
+    // courant (anti-rebind vers le CV d'un autre user). La RLS Supabase devrait
+    // bloquer aussi, mais double-vérification côté client = défense en profondeur.
+    const verifyOwnership = () => {
+      if (!('cv_id' in allowed)) return Promise.resolve();
+      return sb.auth.getSession().then(({ data: { session } }) => {
+        if (!session) throw new Error("Not authenticated");
+        return sb
+          .from('cvs')
+          .select('id')
+          .eq('id', allowed.cv_id)
+          .eq('utilisateur_id', session.user.id)
+          .single()
+          .then(({ data, error }) => {
+            if (error || !data) throw new Error("CV inaccessible");
+          });
       });
+    };
+
+    return verifyOwnership().then(() =>
+      sb.from('nfc_cv').update(allowed).eq('id', nfcId).then(({ error }) => {
+        if (error) throw error;
+      })
+    );
   },
 
   deleteNfcCard(nfcId) {

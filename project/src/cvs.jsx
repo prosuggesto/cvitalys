@@ -192,7 +192,7 @@ const QRDownloadModal = ({ cv, open, onClose, onError }) => {
         triggerBlobDownload(blob, filename);
       }, "image/png");
     } catch (e) {
-      if (typeof console !== "undefined" && console.error) console.error("[QR] download failed");
+      if (window.logErr) window.logErr("[QR] download failed");
       reportError("Téléchargement impossible. Veuillez réessayer.");
     } finally {
       setDownloading(false);

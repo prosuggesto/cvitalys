@@ -66,7 +66,7 @@ function AppInner() {
         setCvs(data);
       })
       .catch((err) => {
-        console.error("Erreur chargement données utilisateur:", err);
+        if (window.logErr) window.logErr("Erreur chargement données utilisateur:", err);
       });
   };
 

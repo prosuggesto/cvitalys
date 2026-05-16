@@ -2,6 +2,69 @@
 
 const { useState, useEffect, useRef, useMemo } = React;
 
+// ---------------------------------------------------------------------------
+// Security helpers — exposés sur window pour usage cross-file (customize, public)
+// ---------------------------------------------------------------------------
+// Refuse tout scheme ≠ http/https (anti javascript:/data:/vbscript:/file:)
+// Préfixe https:// si l'utilisateur a tapé un domaine nu.
+function safeExternalUrl(raw) {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (!s) return null;
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(s) ? s : `https://${s}`;
+  try {
+    const u = new URL(withScheme);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return u.toString();
+  } catch (_) { return null; }
+}
+// Validation email anti-injection pour mailto:
+function safeMailtoTarget(raw) {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (!/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(s)) return null;
+  return s;
+}
+// Whitelist par domaine + auto-build URL depuis un handle nu
+const LINKEDIN_DOMAINS  = ["linkedin.com", "linkd.in", "linked.in"];
+const INSTAGRAM_DOMAINS = ["instagram.com", "ig.me", "instagr.am"];
+function matchesDomain(hostname, allowed) {
+  const h = String(hostname || "").toLowerCase();
+  return allowed.some((d) => h === d || h.endsWith("." + d));
+}
+function safeDomainUrl(raw, allowed, defaultDomain) {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (!s) return null;
+  if (!/[\/.]/.test(s)) {
+    const handle = s.replace(/^@/, "").replace(/[^A-Za-z0-9._\-]/g, "");
+    if (!handle) return null;
+    return `https://${defaultDomain}/${encodeURIComponent(handle)}`;
+  }
+  const safe = safeExternalUrl(s);
+  if (!safe) return null;
+  try {
+    const u = new URL(safe);
+    if (!matchesDomain(u.hostname, allowed)) return null;
+    return safe;
+  } catch (_) { return null; }
+}
+// Logger silencieux en prod (évite fuite d'info via console)
+const _isDev = (() => {
+  try {
+    const h = window.location.hostname;
+    return h === "localhost" || h === "127.0.0.1" || h.endsWith(".local");
+  } catch (_) { return false; }
+})();
+function logErr(...args) { if (_isDev) console.error(...args); }
+function logWarn(...args) { if (_isDev) console.warn(...args); }
+
+Object.assign(window, {
+  safeExternalUrl, safeMailtoTarget, safeDomainUrl,
+  LINKEDIN_DOMAINS, INSTAGRAM_DOMAINS,
+  logErr, logWarn,
+});
+
 const Modal = ({ open, onClose, children, width, padding, zIndex }) => {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape" && open) onClose && onClose(); };
@@ -603,6 +666,16 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
 // ---------------------------------------------------------------------------
 function imageToWebP(file, maxWidth = 3200, quality = 0.97) {
   return new Promise((resolve, reject) => {
+    // Garde-fous : type + taille AVANT de charger en mémoire (anti-DoS navigateur)
+    if (!file || typeof file !== "object") return reject(new Error("Fichier invalide"));
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (file.type && !allowedTypes.includes(file.type)) {
+      return reject(new Error("Format non supporté (JPEG/PNG/WebP uniquement)"));
+    }
+    const MAX_BYTES = 15 * 1024 * 1024; // 15 MB — largement suffisant pour un scan CV
+    if (file.size > MAX_BYTES) {
+      return reject(new Error("Image trop volumineuse (max 15 Mo)"));
+    }
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
