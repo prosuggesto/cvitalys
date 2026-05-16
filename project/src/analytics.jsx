@@ -1,5 +1,135 @@
 // Analytics page — données calculées depuis les CVs Supabase
 
+// Helper : date ISO → "il y a Xh / Xj" (FR / ES)
+const timeAgo = (dateStr, lang) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  const diffMs = Date.now() - d.getTime();
+  const min = Math.floor(diffMs / 60000);
+  const hr  = Math.floor(diffMs / 3600000);
+  const day = Math.floor(diffMs / 86400000);
+  if (lang === 'es') {
+    if (min < 1)   return 'ahora mismo';
+    if (min < 60)  return `hace ${min} min`;
+    if (hr  < 24)  return `hace ${hr} h`;
+    if (day < 7)   return `hace ${day} ${day === 1 ? 'día' : 'días'}`;
+    if (day < 30)  return `hace ${Math.floor(day / 7)} sem.`;
+    return d.toLocaleDateString('es-ES');
+  }
+  if (min < 1)   return "à l'instant";
+  if (min < 60)  return `il y a ${min} min`;
+  if (hr  < 24)  return `il y a ${hr} h`;
+  if (day < 7)   return `il y a ${day} ${day === 1 ? 'jour' : 'jours'}`;
+  if (day < 30)  return `il y a ${Math.floor(day / 7)} sem.`;
+  return d.toLocaleDateString('fr-FR');
+};
+
+// Tableau des interactions — version desktop tableau / mobile cards
+const InteractionsTable = ({ interactions, lang }) => {
+  const isMobile = useIsMobile(720);
+  const labelExchange = lang === 'es' ? 'Encuentro' : 'Échange';
+  const labelFeedback = lang === 'es' ? 'Comentario' : 'Commentaire';
+  const colRdv = lang === 'es' ? 'Cita' : 'RDV';
+  const colWhen = lang === 'es' ? 'Cuándo' : 'Quand';
+  const colRecruteur = lang === 'es' ? 'Reclutador' : 'Recruteur';
+  const colAction = 'Action';
+  const colMessage = lang === 'es' ? 'Mensaje' : 'Message';
+  const anonymous = lang === 'es' ? 'Anónimo' : 'Anonyme';
+
+  if (isMobile) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {interactions.map((it, idx) => {
+          const isExchange = it.type === 'exchange';
+          return (
+            <div key={it.id} style={{ padding: "14px 0", borderTop: idx > 0 ? "1px solid var(--border-soft)" : "none", display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="between" style={{ alignItems: "flex-start", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>{it.recruteur || anonymous}</div>
+                  {it.entreprise && <div className="muted" style={{ fontSize: 12 }}>{it.entreprise}</div>}
+                </div>
+                <span style={{
+                  fontSize: 11, padding: "4px 9px", borderRadius: 999, fontWeight: 500, whiteSpace: "nowrap",
+                  background: isExchange ? "var(--ink)" : "var(--gold-soft)",
+                  color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
+                }}>
+                  {isExchange ? labelExchange : labelFeedback}
+                </span>
+              </div>
+              {it.message && (
+                <div style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
+                  « {it.message} »
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, color: "var(--muted)" }}>
+                {it.date_rdv && isExchange && (
+                  <span style={{ color: "var(--gold-deep)" }}><I.Calendar size={11}/> {fmtDateTimeFr(it.date_rdv)}</span>
+                )}
+                <span>{timeAgo(it.created_at, lang)}</span>
+                {it.cv_name && <span style={{ marginLeft: "auto" }}>{it.cv_name}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Desktop : vrai tableau
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <thead>
+          <tr style={{ textAlign: "left", color: "var(--muted)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500 }}>
+            <th style={{ padding: "10px 12px 10px 0", borderBottom: "1px solid var(--border)" }}>{colRecruteur}</th>
+            <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>{colAction}</th>
+            <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", minWidth: 240 }}>{colMessage}</th>
+            <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{colRdv}</th>
+            <th style={{ padding: "10px 0 10px 12px", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap", textAlign: "right" }}>{colWhen}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {interactions.map((it) => {
+            const isExchange = it.type === 'exchange';
+            return (
+              <tr key={it.id} style={{ borderBottom: "1px solid var(--border-soft)" }}>
+                <td style={{ padding: "14px 12px 14px 0", verticalAlign: "top" }}>
+                  <div style={{ fontWeight: 500, color: "var(--ink)" }}>{it.recruteur || anonymous}</div>
+                  {it.entreprise && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{it.entreprise}</div>}
+                  {it.cv_name && <div className="muted" style={{ fontSize: 10.5, marginTop: 4, letterSpacing: "0.08em", textTransform: "uppercase" }}>{it.cv_name}</div>}
+                </td>
+                <td style={{ padding: "14px 12px", verticalAlign: "top" }}>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    fontSize: 12, padding: "4px 10px", borderRadius: 999, fontWeight: 500, whiteSpace: "nowrap",
+                    background: isExchange ? "var(--ink)" : "var(--gold-soft)",
+                    color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
+                  }}>
+                    {isExchange ? <I.ThumbsUp size={11}/> : <I.Feedback size={11}/>}
+                    {isExchange ? labelExchange : labelFeedback}
+                  </span>
+                </td>
+                <td style={{ padding: "14px 12px", verticalAlign: "top", color: "var(--ink-2)", lineHeight: 1.5 }}>
+                  {it.message
+                    ? <span style={{ fontStyle: "italic" }}>« {it.message} »</span>
+                    : <span className="muted">—</span>}
+                </td>
+                <td style={{ padding: "14px 12px", verticalAlign: "top", whiteSpace: "nowrap", color: isExchange && it.date_rdv ? "var(--gold-deep)" : "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
+                  {isExchange && it.date_rdv ? fmtDateTimeFr(it.date_rdv) : '—'}
+                </td>
+                <td style={{ padding: "14px 0 14px 12px", verticalAlign: "top", whiteSpace: "nowrap", textAlign: "right", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
+                  {timeAgo(it.created_at, lang)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 const StatTile = ({ label, value, trend }) =>
 <div className="stat">
     <div className="stat__label">{label}</div>
@@ -379,7 +509,7 @@ const Analytics = ({ cvs }) => {
         {engagement.map(e => <StatTile key={e.label} label={e.label} value={e.value} />)}
       </div>
 
-      {/* Interactions — dernières demandes d'échange + retours */}
+      {/* Interactions — tableau des demandes d'échange + retours */}
       <div className="card" style={{ padding: 28 }}>
         <div className="between" style={{ marginBottom: 16 }}>
           <h3 className="display" style={{ margin: 0, fontSize: 22, fontWeight: 500 }}>{t("analytics.interactions")}</h3>
@@ -398,52 +528,7 @@ const Analytics = ({ cvs }) => {
             </p>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {interactions.map((it, idx) => {
-              const isExchange = it.type === 'exchange';
-              const labelAction = isExchange
-                ? (lang === 'es' ? 'quiere hablar contigo' : "souhaite échanger")
-                : (lang === 'es' ? 'dejó un comentario' : "a laissé un commentaire");
-              const recruteurName = it.recruteur || (lang === 'es' ? 'Reclutador anónimo' : 'Recruteur anonyme');
-              const entreprise = it.entreprise || '';
-              const rdv = isExchange && it.date_rdv ? fmtDateTimeFr(it.date_rdv) : null;
-              return (
-                <div key={it.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "flex-start", gap: 14, padding: "14px 0", borderTop: idx > 0 ? "1px solid var(--border-soft)" : "none" }}>
-                  <div style={{
-                    width: 38, height: 38, borderRadius: "50%",
-                    background: isExchange ? "var(--ink)" : "var(--gold-soft)",
-                    color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
-                  }}>
-                    {isExchange ? <I.ThumbsUp size={16}/> : <I.Feedback size={16}/>}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500 }}>
-                      {recruteurName}
-                      {entreprise && <span className="muted" style={{ fontWeight: 400 }}> · {entreprise}</span>}
-                      <span className="muted" style={{ fontWeight: 400 }}> {labelAction}</span>
-                    </div>
-                    {it.message && (
-                      <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 4, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
-                        « {it.message} »
-                      </div>
-                    )}
-                    {rdv && (
-                      <div style={{ fontSize: 12, color: "var(--gold-deep)", marginTop: 4 }}>
-                        <I.Calendar size={11}/> {lang === 'es' ? 'RDV: ' : 'RDV : '}{rdv}
-                      </div>
-                    )}
-                    {it.cv_name && (
-                      <div className="muted" style={{ fontSize: 11, marginTop: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                        {it.cv_name}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <InteractionsTable interactions={interactions} lang={lang}/>
         )}
       </div>
 
