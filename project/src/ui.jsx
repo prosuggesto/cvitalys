@@ -65,6 +65,20 @@ Object.assign(window, {
   logErr, logWarn,
 });
 
+// Hook responsive : retourne true si la largeur viewport < breakpoint (mobile)
+function useIsMobile(breakpoint = 600) {
+  const [isMobile, setIsMobile] = useState(() => {
+    try { return window.innerWidth < breakpoint; } catch (_) { return false; }
+  });
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [breakpoint]);
+  return isMobile;
+}
+window.useIsMobile = useIsMobile;
+
 const Modal = ({ open, onClose, children, width, padding, zIndex }) => {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape" && open) onClose && onClose(); };

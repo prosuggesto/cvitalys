@@ -408,6 +408,37 @@ input, textarea, select { font-family: inherit; color: inherit; }
   .page-header h1 { font-size: 36px; }
 }
 
+/* ---------- Mobile (≤600px) — corrige l'overflow + tailles ---------- */
+@media (max-width: 600px) {
+  /* Header : padding réduit + masque le nom du user-chip (avatar seul) */
+  .app-header { padding: 0 14px; gap: 10px; }
+  .user-chip__name { display: none; }
+  .app-header__right { gap: 8px; }
+
+  /* Page : padding latéral encore plus réduit pour éviter le débordement */
+  .page { padding: 24px 14px 80px; }
+
+  /* Close button du modal : fond blanc visible contre n'importe quelle couleur
+     (avant : invisible contre l'image du CV foncée) */
+  .modal__close {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 10px rgba(27,24,20,0.18);
+    top: 12px; right: 12px;
+  }
+  .modal__close:hover { background: var(--bg-soft); }
+
+  /* Cards : padding plus serré sur mobile */
+  .card { box-shadow: var(--shadow-card); }
+}
+
+/* Toujours rendre le modal close visible même desktop (defensive) */
+.modal__close {
+  background: var(--surface);
+  border: 1px solid var(--border-soft, var(--border));
+  box-shadow: 0 2px 8px rgba(27,24,20,0.10);
+}
+
 /* ---------- Public scan page ---------- */
 .public-shell {
   min-height: 100vh; background: var(--bg);

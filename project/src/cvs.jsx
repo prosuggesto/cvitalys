@@ -2,33 +2,39 @@
 
 const CVCard = ({ cv, onPresent, onCustomize, onPreview, onDelete, onDownloadQR }) => {
   const { t } = useT();
+  const isMobile = useIsMobile();
+  // Dimensions adaptées : sur mobile on rétrécit le bloc entier (padding, image, fonts)
+  const padding = isMobile ? 16 : 22;
+  const imgWidth = isMobile ? 210 : 300;
+  const titleSize = isMobile ? 20 : 24;
+  const iconSize = isMobile ? 14 : 16;
   return (
-  <div className="card" style={{ padding: 22, display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
-    <div className="between" style={{ alignItems: "flex-start", gap: 12 }}>
+  <div className="card" style={{ padding, display: "flex", flexDirection: "column", gap: isMobile ? 10 : 14, position: "relative", maxWidth: isMobile ? 340 : "none", margin: isMobile ? "0 auto" : undefined, width: isMobile ? "100%" : undefined }}>
+    <div className="between" style={{ alignItems: "flex-start", gap: 10 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="row gap-12" style={{ alignItems: "center" }}>
-          <span className="display" style={{ fontSize: 24, fontStyle: "italic", fontWeight: 400 }}>{cv.name}</span>
+        <div className="row gap-12" style={{ alignItems: "center", flexWrap: "wrap" }}>
+          <span className="display" style={{ fontSize: titleSize, fontStyle: "italic", fontWeight: 400 }}>{cv.name}</span>
           <span className="badge">{cv.role}</span>
         </div>
         <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{cv.sector}</div>
       </div>
       <div className="row gap-8">
-        <button className="icon-btn" onClick={onCustomize} title={t("nav.customize")}><I.Brush size={16}/></button>
-        <button className="icon-btn" onClick={onPreview} title={t("common.preview")}><I.Grid size={16}/></button>
-        <button className="icon-btn icon-btn--danger" onClick={onDelete} title={t("common.delete")} style={{ color: "var(--red)" }}><I.X size={16}/></button>
+        <button className="icon-btn" onClick={onCustomize} title={t("nav.customize")}><I.Brush size={iconSize}/></button>
+        <button className="icon-btn" onClick={onPreview} title={t("common.preview")}><I.Grid size={iconSize}/></button>
+        <button className="icon-btn icon-btn--danger" onClick={onDelete} title={t("common.delete")} style={{ color: "var(--red)" }}><I.X size={iconSize}/></button>
       </div>
     </div>
-    <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 18px" }}>
+    <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "8px 0 14px" : "12px 0 18px" }}>
       {cv.cv_url
-        ? <ImagePreview url={cv.cv_url} width={300} float3d={true}/>
-        : <CVPreviewVisual cv={cv} scale={1} float3d={true}/>}
+        ? <ImagePreview url={cv.cv_url} width={imgWidth} float3d={true}/>
+        : <CVPreviewVisual cv={cv} scale={isMobile ? 0.75 : 1} float3d={true}/>}
     </div>
     <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }}>
       <button className="btn btn--primary" onClick={onPresent}>
-        <I.QR size={16}/> {t("cvs.present")}
+        <I.QR size={iconSize}/> {t("cvs.present")}
       </button>
-      <button className="btn btn--secondary" onClick={onDownloadQR} title="Télécharger QR" style={{ padding: "0 16px" }}>
-        <I.Download size={16}/>
+      <button className="btn btn--secondary" onClick={onDownloadQR} title="Télécharger QR" style={{ padding: "0 14px" }}>
+        <I.Download size={iconSize}/>
       </button>
     </div>
   </div>
@@ -52,6 +58,7 @@ const EmptyCVCard = ({ onClick }) => {
 
 const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
   const { t } = useT();
+  const isMobile = useIsMobile();
   if (!cv) return null;
   const base = window.APP_URL || (window.location.origin + window.location.pathname);
   const publicUrl = cv.short_code ? `${base}#/cv/${cv.short_code}` : null;
@@ -63,27 +70,31 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
     onCopy && onCopy();
   };
 
+  // QR + carré blanc plus compacts sur mobile pour ne pas dominer l'écran
+  const qrSize = isMobile ? 150 : 180;
+  const qrPadding = isMobile ? 10 : 18;
+
   return (
     <Modal open={open} onClose={onClose} width={920}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
         <div style={{ padding: 48, background: "var(--bg-soft)", borderRadius: "22px 0 0 22px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {cv.cv_url ? <ImagePreview url={cv.cv_url} width={300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={1.05}/>}
+          {cv.cv_url ? <ImagePreview url={cv.cv_url} width={isMobile ? 220 : 300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={1.05}/>}
         </div>
-        <div style={{ padding: "56px 48px 48px" }}>
+        <div style={{ padding: isMobile ? "32px 24px 28px" : "56px 48px 48px" }}>
           <div className="eyebrow">{t("cvs.modal.present.eyebrow")}</div>
-          <h2 className="display" style={{ fontSize: 36, fontWeight: 500, margin: "10px 0 14px", fontStyle: "italic" }}>{cv.name}</h2>
-          <p className="muted" style={{ marginBottom: 24, fontSize: 14, lineHeight: 1.55 }}>
+          <h2 className="display" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 500, margin: "10px 0 14px", fontStyle: "italic" }}>{cv.name}</h2>
+          <p className="muted" style={{ marginBottom: 20, fontSize: 14, lineHeight: 1.55 }}>
             {t("cvs.modal.present.body")}
           </p>
-          <div style={{ padding: 18, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18, display: "flex", justifyContent: "center" }}>
-            <QRBlock size={180} url={publicUrl} cachedSrc={qrSrc}/>
+          <div style={{ padding: qrPadding, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, display: "flex", justifyContent: "center" }}>
+            <QRBlock size={qrSize} url={publicUrl} cachedSrc={qrSrc}/>
           </div>
-          <button className="btn btn--primary btn--block btn--lg" style={{ marginTop: 20 }} onClick={handleCopy}>
+          <button className="btn btn--primary btn--block btn--lg" style={{ marginTop: 18 }} onClick={handleCopy}>
             <I.Share size={16}/> {t("common.share")}
           </button>
         </div>
       </div>
-      <style>{`@media (max-width: 760px) { .modal > div { grid-template-columns: 1fr !important; } .modal > div > div:first-child { border-radius: 22px 22px 0 0 !important; padding: 32px !important; } }`}</style>
+      <style>{`@media (max-width: 760px) { .modal > div { grid-template-columns: 1fr !important; } .modal > div > div:first-child { border-radius: 22px 22px 0 0 !important; padding: 24px !important; } }`}</style>
     </Modal>
   );
 };
