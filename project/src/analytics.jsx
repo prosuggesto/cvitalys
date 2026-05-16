@@ -115,7 +115,7 @@ const InteractionsTable = ({ interactions, lang }) => {
                     ? <span style={{ fontStyle: "italic" }}>« {it.message} »</span>
                     : <span className="muted">—</span>}
                 </td>
-                <td style={{ padding: "14px 12px", verticalAlign: "top", whiteSpace: "nowrap", color: isExchange && it.date_rdv ? "var(--gold-deep)" : "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
+                <td style={{ padding: "14px 12px", verticalAlign: "top", whiteSpace: "nowrap", color: isExchange && it.date_rdv ? "var(--gold-deep)" : "var(--muted)", fontVariantNumeric: "tabular-nums", textAlign: isExchange && it.date_rdv ? "left" : "center" }}>
                   {isExchange && it.date_rdv ? fmtDateTimeFr(it.date_rdv) : '—'}
                 </td>
                 <td style={{ padding: "14px 0 14px 12px", verticalAlign: "top", whiteSpace: "nowrap", textAlign: "right", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>

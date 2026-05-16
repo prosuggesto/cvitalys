@@ -241,7 +241,7 @@ const AnalyticsPreview = () => {
                     <td style={{ padding: "14px 12px", verticalAlign: "top", color: "var(--ink-2)", lineHeight: 1.5, fontStyle: "italic" }}>
                       « {it.message} »
                     </td>
-                    <td style={{ padding: "14px 12px", verticalAlign: "top", whiteSpace: "nowrap", color: it.rdv ? "var(--gold-deep)" : "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
+                    <td style={{ padding: "14px 12px", verticalAlign: "top", whiteSpace: "nowrap", color: it.rdv ? "var(--gold-deep)" : "var(--muted)", fontVariantNumeric: "tabular-nums", textAlign: it.rdv ? "left" : "center" }}>
                       {it.rdv || '—'}
                     </td>
                     <td style={{ padding: "14px 0 14px 12px", verticalAlign: "top", whiteSpace: "nowrap", textAlign: "right", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
@@ -414,8 +414,8 @@ const Landing = ({ navigate }) => {
         </div>
       </section>
 
-      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "60px 32px 100px" }}>
-        <div className="card" style={{ padding: 56, textAlign: "center", background: "var(--ink)", color: "#F7F3EC", borderColor: "var(--ink)" }}>
+      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "60px 32px 120px" }}>
+        <div className="card reveal reveal--grail" style={{ padding: 56, textAlign: "center", background: "var(--ink)", color: "#F7F3EC", borderColor: "var(--ink)" }}>
           <div className="eyebrow" style={{ color: "rgba(247,243,236,0.6)" }}>{t("landing.cta.eyebrow")}</div>
           <h2 className="display" style={{ fontSize: 52, margin: "12px 0 18px", fontWeight: 500, color: "#F7F3EC" }}>{t("landing.cta.title1")} <em className="display-italic" style={{ color: "var(--gold-soft)" }}>{t("landing.cta.title2")}</em></h2>
           <p style={{ maxWidth: 480, margin: "0 auto 28px", color: "rgba(247,243,236,0.7)" }}>{t("landing.cta.intro")}</p>
