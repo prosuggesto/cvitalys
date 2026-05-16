@@ -40,6 +40,10 @@ const Analytics = ({ cvs }) => {
   const [statsGlobales, setStatsGlobales] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
+  // ---- Dernières interactions (échange + retour avec entreprise/recruteur) -
+  const [interactions, setInteractions] = useState([]);
+  const [loadingInter, setLoadingInter] = useState(false);
+
   // Dériver l'userId depuis le premier CV
   const userId = cvs.length > 0 ? cvs[0].utilisateur_id : null;
 
@@ -54,6 +58,15 @@ const Analytics = ({ cvs }) => {
         setStatsGlobales(null);
         setLoadingStats(false);
       });
+  }, [userId]);
+
+  // Charger les dernières interactions (RLS filtre auto par user)
+  useEffect(() => {
+    if (!userId) return;
+    setLoadingInter(true);
+    api.getLastInteractions(20)
+      .then((rows) => { setInteractions(rows); setLoadingInter(false); })
+      .catch(() => { setInteractions([]); setLoadingInter(false); });
   }, [userId]);
 
   // Map nom de secteur → secteur_id (pour filtrer stats_globales)
@@ -366,15 +379,72 @@ const Analytics = ({ cvs }) => {
         {engagement.map(e => <StatTile key={e.label} label={e.label} value={e.value} />)}
       </div>
 
-      {/* Interactions — fonctionnalité future */}
+      {/* Interactions — dernières demandes d'échange + retours */}
       <div className="card" style={{ padding: 28 }}>
         <div className="between" style={{ marginBottom: 16 }}>
           <h3 className="display" style={{ margin: 0, fontSize: 22, fontWeight: 500 }}>{t("analytics.interactions")}</h3>
         </div>
-        <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
-          <I.Calendar size={32} stroke="var(--subtle)"/>
-          <p style={{ margin: "12px 0 0" }}>Fonctionnalité disponible prochainement</p>
-        </div>
+        {loadingInter ? (
+          <div style={{ padding: "30px 0", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
+            <div style={{ width: 22, height: 22, margin: "0 auto", border: "2px solid var(--border)", borderTopColor: "var(--gold-deep)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }}/>
+          </div>
+        ) : interactions.length === 0 ? (
+          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
+            <I.Calendar size={32} stroke="var(--subtle)"/>
+            <p style={{ margin: "12px 0 0" }}>
+              {lang === 'es'
+                ? 'Aún ninguna interacción. Las solicitudes de los reclutadores aparecerán aquí.'
+                : "Aucune interaction pour le moment. Les demandes des recruteurs apparaîtront ici."}
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {interactions.map((it, idx) => {
+              const isExchange = it.type === 'exchange';
+              const labelAction = isExchange
+                ? (lang === 'es' ? 'quiere hablar contigo' : "souhaite échanger")
+                : (lang === 'es' ? 'dejó un comentario' : "a laissé un commentaire");
+              const recruteurName = it.recruteur || (lang === 'es' ? 'Reclutador anónimo' : 'Recruteur anonyme');
+              const entreprise = it.entreprise || '';
+              const rdv = isExchange && it.date_rdv ? fmtDateTimeFr(it.date_rdv) : null;
+              return (
+                <div key={it.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "flex-start", gap: 14, padding: "14px 0", borderTop: idx > 0 ? "1px solid var(--border-soft)" : "none" }}>
+                  <div style={{
+                    width: 38, height: 38, borderRadius: "50%",
+                    background: isExchange ? "var(--ink)" : "var(--gold-soft)",
+                    color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0,
+                  }}>
+                    {isExchange ? <I.ThumbsUp size={16}/> : <I.Feedback size={16}/>}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 500 }}>
+                      {recruteurName}
+                      {entreprise && <span className="muted" style={{ fontWeight: 400 }}> · {entreprise}</span>}
+                      <span className="muted" style={{ fontWeight: 400 }}> {labelAction}</span>
+                    </div>
+                    {it.message && (
+                      <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 4, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
+                        « {it.message} »
+                      </div>
+                    )}
+                    {rdv && (
+                      <div style={{ fontSize: 12, color: "var(--gold-deep)", marginTop: 4 }}>
+                        <I.Calendar size={11}/> {lang === 'es' ? 'RDV: ' : 'RDV : '}{rdv}
+                      </div>
+                    )}
+                    {it.cv_name && (
+                      <div className="muted" style={{ fontSize: 11, marginTop: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        {it.cv_name}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <style>{`@media (max-width: 900px) { .page > .card[style*="grid-template-columns"], .page > .grid[style*="grid-template-columns: 1.2fr"] { grid-template-columns: 1fr !important; } }`}</style>

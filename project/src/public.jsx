@@ -17,7 +17,16 @@ const ExchangeModal = ({ open, onClose, cv, user, toast }) => {
   useEffect(() => {if (open) setF({ company: "", recruiter: "", note: "", date: "" });}, [open]);
   const submit = (e) => {
     e.preventDefault();
-    if (cv && cv.short_code) api.incrementStat(cv.short_code, 'clic_echange');
+    if (cv && cv.short_code) {
+      api.incrementStat(cv.short_code, 'clic_echange');
+      // Sauvegarde l'interaction en DB (pour la timeline analytics)
+      api.submitInteraction(cv.short_code, 'exchange', {
+        entreprise: f.company,
+        recruteur: f.recruiter,
+        message: f.note,
+        dateRdv: f.date || null,
+      }).catch(() => { /* silent : on n'empêche pas l'envoi de l'email */ });
+    }
     const dateLabel = f.date ? fmtDateTimeFr(f.date) : "—";
     const isEs = lang === 'es';
     const subject = encodeURIComponent(isEs
@@ -59,7 +68,15 @@ const FeedbackModal = ({ open, onClose, cv, user, toast }) => {
   useEffect(() => {if (open) setF({ company: "", recruiter: "", note: "" });}, [open]);
   const submit = (e) => {
     e.preventDefault();
-    if (cv && cv.short_code) api.incrementStat(cv.short_code, 'clic_retour');
+    if (cv && cv.short_code) {
+      api.incrementStat(cv.short_code, 'clic_retour');
+      // Sauvegarde l'interaction en DB (pour la timeline analytics)
+      api.submitInteraction(cv.short_code, 'feedback', {
+        entreprise: f.company,
+        recruteur: f.recruiter,
+        message: f.note,
+      }).catch(() => { /* silent */ });
+    }
     const isEs = lang === 'es';
     const subject = encodeURIComponent(isEs
       ? `Comentario del reclutador — CV de ${user.firstName} ${user.lastName}`

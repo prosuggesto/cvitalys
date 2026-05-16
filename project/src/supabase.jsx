@@ -337,6 +337,41 @@ const api = {
       });
   },
 
+  // ---- INTERACTIONS --------------------------------------------------------
+  // Insertion depuis la page publique (recruteur) via RPC SECURITY DEFINER.
+  // type: 'exchange' | 'feedback'
+  submitInteraction(shortCode, type, { entreprise, recruteur, message, dateRdv } = {}) {
+    return sb
+      .rpc('submit_interaction', {
+        p_jeton_public: shortCode,
+        p_type: type,
+        p_entreprise: entreprise || null,
+        p_recruteur: recruteur || null,
+        p_message: message || null,
+        p_date_rdv: dateRdv || null,
+      })
+      .then(({ data, error }) => {
+        if (error) {
+          if (window.logWarn) window.logWarn('submitInteraction error:', error.message);
+          throw error;
+        }
+        return data;
+      });
+  },
+
+  // Lecture des dernières interactions (uniquement le owner via RLS).
+  getLastInteractions(limit = 20) {
+    return sb
+      .rpc('get_last_interactions', { p_limit: limit })
+      .then(({ data, error }) => {
+        if (error) {
+          if (window.logWarn) window.logWarn('getLastInteractions error:', error.message);
+          return [];
+        }
+        return data || [];
+      });
+  },
+
   getStatsForUser(userId) {
     return sb
       .from('cvs')

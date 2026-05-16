@@ -61,12 +61,14 @@ const AnalyticsPreview = () => {
     { id: "interactions", label: t("landing.analytics.tab5") },
   ];
 
-  // Mock interactions récentes
+  // Mock interactions récentes — réplique exacte de la vraie liste analytics
+  // (recruteur + entreprise + message court, pas de timestamps puisqu'on ne
+  // les affiche pas non plus dans la vraie page).
   const interactions = [
-    { name: "Lucas M.", action: t("landing.analytics.inter.comment"), when: t("landing.analytics.inter.ago2h"), type: "feedback" },
-    { name: "Sophie R.", action: t("landing.analytics.inter.exchange"), when: t("landing.analytics.inter.ago5h"), type: "exchange" },
-    { name: "Marie L.", action: t("landing.analytics.inter.comment"), when: t("landing.analytics.inter.yesterday"), type: "feedback" },
-    { name: "Thomas D.", action: t("landing.analytics.inter.exchange"), when: t("landing.analytics.inter.days2"), type: "exchange" },
+    { name: "Lucas Martin",   company: "Hôtel Lutetia",       action: t("landing.analytics.inter.exchange"), message: "Profil intéressant, disponible pour un échange cette semaine ?", type: "exchange" },
+    { name: "Sophie Renaud",  company: "Maison Bréguet",      action: t("landing.analytics.inter.comment"),  message: "Votre vocal est très clair et professionnel, bravo.",            type: "feedback" },
+    { name: "Marie Lopez",    company: "Garorock Festival",   action: t("landing.analytics.inter.exchange"), message: "Souhaite vous rencontrer pour la saison estivale.",              type: "exchange" },
+    { name: "Thomas Dubois",  company: "Institut IES Jaroso", action: t("landing.analytics.inter.comment"),  message: "Excellente présentation, on revient vers vous.",                 type: "feedback" },
   ];
 
   const channels = [
@@ -190,25 +192,29 @@ const AnalyticsPreview = () => {
       )}
 
       {tab === "interactions" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
           {interactions.map((it, idx) => {
             const isExchange = it.type === "exchange";
             return (
-              <div key={idx} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", gap: 14, padding: "14px 0", borderTop: idx > 0 ? "1px solid var(--border-soft)" : "none" }}>
+              <div key={idx} style={{ display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "flex-start", gap: 14, padding: "14px 0", borderTop: idx > 0 ? "1px solid var(--border-soft)" : "none" }}>
                 <div style={{
                   width: 38, height: 38, borderRadius: "50%",
                   background: isExchange ? "var(--ink)" : "var(--gold-soft)",
                   color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
-                  display: "flex", alignItems: "center", justifyContent: "center"
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
                 }}>
                   {isExchange ? <I.ThumbsUp size={16}/> : <I.Feedback size={16}/>}
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 500 }}>
-                    {it.name} <span className="muted" style={{ fontWeight: 400 }}>{it.action}</span>
+                    {it.name}
+                    <span className="muted" style={{ fontWeight: 400 }}> · {it.company}</span>
+                    <span className="muted" style={{ fontWeight: 400 }}> {it.action}</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 4, lineHeight: 1.45 }}>
+                    « {it.message} »
                   </div>
                 </div>
-                <div className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{it.when}</div>
               </div>
             );
           })}
