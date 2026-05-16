@@ -47,6 +47,126 @@ const StepCard = ({ n, title, body }) => (
   </div>
 );
 
+// AnalyticsPreview — mini-dashboard avec données mockées + onglets
+// Mime le vrai dashboard Analytics pour montrer ce que l'user obtient.
+const AnalyticsPreview = () => {
+  const { t } = useT();
+  const [tab, setTab] = useState("overview");
+
+  const tabs = [
+    { id: "overview", label: t("landing.analytics.tab1") },
+    { id: "channels", label: t("landing.analytics.tab2") },
+    { id: "champions", label: t("landing.analytics.tab3") },
+    { id: "audio", label: t("landing.analytics.tab4") },
+  ];
+
+  const channels = [
+    { label: "WhatsApp", value: 42, brand: "whatsapp" },
+    { label: "Email",    value: 78, brand: "gmail" },
+    { label: "LinkedIn", value: 31, brand: "linkedin" },
+    { label: "Instagram",value: 12, brand: "instagram" },
+    { label: "Site web", value: 18, icon: "Globe" },
+  ];
+  const maxClick = Math.max(...channels.map((c) => c.value));
+
+  return (
+    <div className="card" style={{ padding: 24, background: "var(--surface)" }}>
+      {/* Onglets */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 22, flexWrap: "wrap", padding: 4, background: "var(--surface-2)", borderRadius: 999, width: "fit-content" }}>
+        {tabs.map((tt) => (
+          <button
+            key={tt.id}
+            onClick={() => setTab(tt.id)}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 500,
+              border: "none",
+              cursor: "pointer",
+              background: tab === tt.id ? "var(--ink)" : "transparent",
+              color: tab === tt.id ? "#F7F3EC" : "var(--ink-2)",
+              transition: "all .15s",
+            }}>
+            {tt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Contenu selon onglet */}
+      {tab === "overview" && (
+        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
+          <div className="stat"><div className="stat__label">{t("landing.analytics.kpi.scans")}</div><div className="stat__value">247</div><div className="stat__trend">↑ 12%</div></div>
+          <div className="stat"><div className="stat__label">{t("landing.analytics.kpi.time")}</div><div className="stat__value">2:34</div></div>
+          <div className="stat"><div className="stat__label">{t("landing.analytics.kpi.feedback")}</div><div className="stat__value">8,5%</div><div className="stat__trend">↑ 3 pts</div></div>
+        </div>
+      )}
+
+      {tab === "channels" && (
+        <div>
+          {channels.map((c) => {
+            const pct = (c.value / maxClick) * 100;
+            const Ico = c.icon ? I[c.icon] : null;
+            return (
+              <div key={c.label} style={{ display: "grid", gridTemplateColumns: "auto 1fr 40px", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid var(--border-soft)" }}>
+                <span style={{ width: 32, height: 32, borderRadius: 10, background: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  {c.brand ? <BrandLogo name={c.brand} size={18}/> : Ico && <Ico size={15}/>}
+                </span>
+                <div>
+                  <div style={{ fontSize: 13, marginBottom: 6 }}>{c.label}</div>
+                  <div style={{ height: 4, background: "var(--bg-soft)", borderRadius: 2, position: "relative" }}>
+                    <div style={{ position: "absolute", inset: 0, width: pct + "%", background: "var(--gold-deep)", borderRadius: 2 }}/>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 500 }}>{c.value}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab === "champions" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ padding: 18, background: "var(--bg-soft)", borderRadius: 14 }}>
+            <div className="row gap-8" style={{ marginBottom: 6 }}>
+              <I.Crown size={16} stroke="var(--gold-deep)"/>
+              <div className="eyebrow" style={{ color: "var(--gold-deep)" }}>{t("landing.analytics.champion.topCv")}</div>
+            </div>
+            <div className="display" style={{ fontSize: 26, fontWeight: 500, fontStyle: "italic", lineHeight: 1.1 }}>Réceptionniste · Hôtellerie</div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>132 scans · 53% {t("landing.analytics.champion.share")}</div>
+          </div>
+          <div style={{ padding: 18, background: "var(--surface-2)", borderRadius: 14, border: "1px solid var(--border-soft)" }}>
+            <div className="eyebrow" style={{ marginBottom: 6 }}>{t("landing.analytics.champion.topSector")}</div>
+            <div className="display" style={{ fontSize: 22, fontWeight: 500, lineHeight: 1.15 }}>Hôtellerie</div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>168 scans · 68% {t("landing.analytics.champion.share")}</div>
+          </div>
+        </div>
+      )}
+
+      {tab === "audio" && (
+        <div style={{ padding: 22, background: "#1B1814", color: "#F7F3EC", borderRadius: 14 }}>
+          <div className="row gap-24" style={{ alignItems: "flex-end" }}>
+            <div>
+              <div className="display" style={{ fontSize: 40, fontWeight: 500, color: "#F7F3EC", lineHeight: 1 }}>0:47</div>
+              <div style={{ fontSize: 12, color: "rgba(247,243,236,0.6)", marginTop: 4 }}>{t("landing.analytics.audio.avg")}</div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1 }}>
+              <div>
+                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(247,243,236,0.5)", marginBottom: 4 }}>{t("landing.analytics.audio.launched")}</div>
+                <div className="display" style={{ fontSize: 22, fontWeight: 500, color: "#F7F3EC" }}>189</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(247,243,236,0.5)", marginBottom: 4 }}>{t("landing.analytics.audio.stopped")}</div>
+                <div className="display" style={{ fontSize: 22, fontWeight: 500, color: "var(--gold-soft)" }}>142</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const BenefitRow = ({ title, body, num }) => (
   <div style={{ display: "grid", gridTemplateColumns: "60px 1fr", gap: 22, padding: "28px 0", borderTop: "1px solid var(--border)" }}>
     <div className="display-italic" style={{ fontSize: 26, color: "var(--gold-deep)" }}>{num}</div>
@@ -141,7 +261,19 @@ const Landing = ({ navigate }) => {
         </div>
       </section>
 
-      <section id="preview" style={{ maxWidth: 1280, margin: "0 auto", padding: "100px 32px" }}>
+      <section id="analytics" style={{ maxWidth: 1280, margin: "0 auto", padding: "100px 32px 40px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: 56, alignItems: "center" }}>
+          <div>
+            <div className="eyebrow">{t("landing.analytics.eyebrow")}</div>
+            <h2 className="display" style={{ fontSize: 48, margin: "10px 0 18px", fontWeight: 500 }}>{t("landing.analytics.title1")} <em className="display-italic">{t("landing.analytics.title2")}</em></h2>
+            <p className="muted">{t("landing.analytics.intro")}</p>
+          </div>
+          <AnalyticsPreview/>
+        </div>
+        <style>{`@media (max-width: 900px) { #analytics > div { grid-template-columns: 1fr !important; gap: 32px !important; } }`}</style>
+      </section>
+
+      <section id="preview" style={{ maxWidth: 1280, margin: "0 auto", padding: "60px 32px 100px" }}>
         <div style={{ textAlign: "center", marginBottom: 48 }}>
           <div className="eyebrow">{t("landing.preview.eyebrow")}</div>
           <h2 className="display" style={{ fontSize: 52, margin: "10px 0 14px", fontWeight: 500 }}>{t("landing.preview.title1")} <em className="display-italic">{t("landing.preview.title2")}</em> {t("landing.preview.title3")}</h2>
