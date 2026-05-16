@@ -65,10 +65,8 @@ const AnalyticsPreview = () => {
   // Chaque entrée a recruteur, entreprise, type, message, rdv (exchange),
   // when (texte relatif déjà calculé) et cv_name (eyebrow).
   const interactions = [
-    { name: "Lucas Martin",   company: "Hôtel Lutetia",       type: "exchange", message: "Profil intéressant, disponible pour un échange cette semaine ?", rdv: "24/05/2026 à 10:00", when: "il y a 2 h",   cv_name: "CV Hôtellerie" },
-    { name: "Sophie Renaud",  company: "Maison Bréguet",      type: "feedback", message: "Votre vocal est très clair et professionnel, bravo.",            rdv: null,                  when: "il y a 5 h",   cv_name: "CV Hôtellerie" },
-    { name: "Marie Lopez",    company: "Garorock Festival",   type: "exchange", message: "Souhaite vous rencontrer pour la saison estivale.",              rdv: "28/05/2026 à 14:30", when: "hier",         cv_name: "CV Événementiel" },
-    { name: "Thomas Dubois",  company: "Institut IES Jaroso", type: "feedback", message: "Excellente présentation, on revient vers vous.",                 rdv: null,                  when: "il y a 2 j",   cv_name: "CV Hôtellerie" },
+    { name: "Lucas Martin",  company: "Hôtel Lutetia",  type: "exchange", message: "Profil intéressant, disponible pour un échange cette semaine ?", rdv: "24/05/2026 à 10:00", when: "il y a 2 h", cv_name: "CV Hôtellerie" },
+    { name: "Sophie Renaud", company: "Maison Bréguet", type: "feedback", message: "Votre vocal est très clair et professionnel, bravo.",            rdv: null,                  when: "il y a 5 h", cv_name: "CV Hôtellerie" },
   ];
   const labelExchange = "Échange";
   const labelFeedback = "Commentaire";
