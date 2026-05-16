@@ -430,6 +430,13 @@ input, textarea, select { font-family: inherit; color: inherit; }
 
   /* Cards : padding plus serré sur mobile */
   .card { box-shadow: var(--shadow-card); }
+
+  /* iOS Safari auto-zoom prevention : tout input avec font-size < 16px
+     déclenche un zoom automatique au focus — on force 16px sur mobile */
+  .input, .select, .textarea { font-size: 16px; }
+
+  /* Modal backdrop : moins de marge pour maximiser la surface utile */
+  .modal-backdrop { padding: 12px; }
 }
 
 /* Toujours rendre le modal close visible même desktop (defensive) */

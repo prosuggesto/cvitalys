@@ -85,12 +85,14 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
   const qrPadding = isMobile ? 10 : 18;
 
   return (
-    <Modal open={open} onClose={onClose} width={920}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
-        <div style={{ padding: 48, background: "var(--bg-soft)", borderRadius: "22px 0 0 22px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {cv.cv_url ? <ImagePreview url={cv.cv_url} width={isMobile ? 220 : 300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={1.05}/>}
-        </div>
-        <div style={{ padding: isMobile ? "32px 24px 28px" : "56px 48px 48px" }}>
+    <Modal open={open} onClose={onClose} width={isMobile ? 500 : 920}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 0 }}>
+        {!isMobile && (
+          <div style={{ padding: 48, background: "var(--bg-soft)", borderRadius: "22px 0 0 22px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {cv.cv_url ? <ImagePreview url={cv.cv_url} width={300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={1.05}/>}
+          </div>
+        )}
+        <div style={{ padding: isMobile ? "36px 24px 30px" : "56px 48px 48px", borderRadius: isMobile ? 22 : "0 22px 22px 0" }}>
           <div className="eyebrow">{t("cvs.modal.present.eyebrow")}</div>
           <h2 className="display" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 500, margin: "10px 0 14px", fontStyle: "italic" }}>{cv.name}</h2>
           <p className="muted" style={{ marginBottom: 20, fontSize: 14, lineHeight: 1.55 }}>
@@ -104,7 +106,6 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
           </button>
         </div>
       </div>
-      <style>{`@media (max-width: 760px) { .modal > div { grid-template-columns: 1fr !important; } .modal > div > div:first-child { border-radius: 22px 22px 0 0 !important; padding: 24px !important; } }`}</style>
     </Modal>
   );
 };
@@ -262,6 +263,7 @@ const QRDownloadModal = ({ cv, open, onClose, onError }) => {
 
 const AddCVModal = ({ open, onClose, onCreate, session }) => {
   const { t } = useT();
+  const isMobile = useIsMobile();
   const [f, setF] = useState({ name: "", role: { id: null, nom: "" }, sector: { id: null, nom: "" }, file: null, audioBlob: null, langue: "fr" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -332,13 +334,13 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
 
   return (
     <Modal open={open} onClose={onClose} width={560}>
-      <div style={{ padding: 40 }}>
+      <div style={{ padding: isMobile ? 24 : 40 }}>
         <div className="eyebrow">{t("cvs.modal.add.eyebrow")}</div>
-        <h2 className="display" style={{ fontSize: 32, margin: "8px 0 6px", fontWeight: 500 }}>{t("cvs.modal.add.title")}</h2>
-        <p className="muted" style={{ marginBottom: 24, fontSize: 14 }}>{t("cvs.modal.add.sub")}</p>
+        <h2 className="display" style={{ fontSize: isMobile ? 26 : 32, margin: "8px 0 6px", fontWeight: 500 }}>{t("cvs.modal.add.title")}</h2>
+        <p className="muted" style={{ marginBottom: 20, fontSize: 14 }}>{t("cvs.modal.add.sub")}</p>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Field label={t("common.cvName")}><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="ex. CV Hôtellerie" required/></Field>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
             <ComboboxField
               label={t("common.role")}
               value={f.role}
