@@ -327,34 +327,27 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
       .then(([posteId, secteurId]) => api.createCv(userId, { nom_cv: f.name, poste_id: posteId, secteur_id: secteurId, langue: f.langue }))
       .then((newCv) => {
         const final = { ...newCv };
-        const warnings = [];
-        // Upload image (bloquant — si ça fail on rejette pour que l'user re-tente)
+        // Upload image (BLOQUANT — partie structurante du CV).
         const fileUpload = f.file
           ? imageToWebP(f.file)
               .then((webp) => api.uploadCvFile(userId, final.dbId, webp))
               .then((url) => { final.cv_url = url; final.hasFile = true; })
           : Promise.resolve();
-        // Upload audio NON-bloquant — si ça fail (mime, taille, réseau...),
-        // on garde le CV créé et on navigue quand même vers customize.
-        // L'user pourra re-enregistrer son audio dans la page de personnalisation.
-        const audioUpload = f.audioBlob
-          ? api.uploadAudio(userId, final.dbId, f.audioBlob)
-              .then((url) => { final.audio_url = url; final.audio = { url }; })
+        return fileUpload.then(() => {
+          // Upload audio FIRE-AND-FORGET — on ne l'attend PAS avant de naviguer.
+          // Sur iOS Safari l'upload audio peut hang/être lent et bloquer la
+          // redirection. L'audio termine en arrière-plan ; si fail, l'user
+          // pourra ré-enregistrer depuis la page de personnalisation.
+          if (f.audioBlob) {
+            api.uploadAudio(userId, final.dbId, f.audioBlob)
               .catch((e) => {
                 if (window.logErr) window.logErr("[CV create] audio upload failed:", e && e.message);
-                warnings.push("audio");
-              })
-          : Promise.resolve();
-        return Promise.all([fileUpload, audioUpload]).then(() => ({ final, warnings }));
+              });
+          }
+          return final;
+        });
       })
-      .then(({ final, warnings }) => {
-        setSaving(false);
-        onCreate(final);
-        if (warnings.includes("audio")) {
-          // toast non-bloquant — accessible via le contexte parent
-          setTimeout(() => alert("Le CV a été créé mais l'audio n'a pas pu être uploadé. Ré-enregistrez-le depuis la page de personnalisation."), 100);
-        }
-      })
+      .then((newCv) => { setSaving(false); onCreate(newCv); })
       .catch((err) => { setSaving(false); setError(err.message || "Une erreur est survenue lors de la création du CV."); });
   };
 

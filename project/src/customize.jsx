@@ -431,4 +431,33 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
     </div>);
 };
 
-Object.assign(window, { CustomizeSelect, CustomizeEdit });
+// Fallback quand on arrive sur /app/customize/:id mais que le CV n'est pas
+// (encore) dans le state local. Refetch depuis le serveur puis met à jour cvs.
+const CustomizeMissing = ({ id, session, navigate, setCvs, cvs }) => {
+  const [tried, setTried] = useState(false);
+
+  useEffect(() => {
+    if (!session || tried) return;
+    setTried(true);
+    api.getCvs(session.user.id)
+      .then((freshCvs) => {
+        setCvs(freshCvs);
+        // Si toujours pas trouvé après refetch → retour à la liste
+        if (!freshCvs.find((c) => c.id === id)) {
+          setTimeout(() => navigate("/app/customize"), 600);
+        }
+      })
+      .catch(() => {
+        setTimeout(() => navigate("/app/customize"), 600);
+      });
+  }, [session, id]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 14, padding: 24 }}>
+      <div style={{ width: 32, height: 32, border: "2px solid var(--border)", borderTopColor: "var(--gold-deep)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }}/>
+      <div className="muted" style={{ fontSize: 14 }}>Chargement du CV…</div>
+    </div>
+  );
+};
+
+Object.assign(window, { CustomizeSelect, CustomizeEdit, CustomizeMissing });

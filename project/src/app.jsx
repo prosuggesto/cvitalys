@@ -159,15 +159,23 @@ function AppInner() {
   } else if (route.startsWith("/app/customize/")) {
     const id = route.split("/").pop();
     const cv = cvs.find((c) => c.id === id);
-    page = <CustomizeEdit
-      cv={cv}
-      session={session}
-      profile={profile}
-      onSave={(updated) => setCvs(cvs.map((c) => c.id === updated.id ? updated : c))}
-      onPreview={(cv) => navigate(`/cv/${cv.short_code || cv.id}`)}
-      toast={toast}
-      navigate={navigate}
-    />;
+    if (!cv) {
+      // CV pas (encore) dans le state local : peut arriver après création
+      // si la propagation du setCvs n'est pas encore visible, ou si l'user
+      // ouvre /app/customize/X via deep-link avant que getCvs ait fini.
+      // On refetch depuis le serveur pour s'assurer d'avoir la donnée à jour.
+      page = <CustomizeMissing id={id} session={session} navigate={navigate} setCvs={setCvs} cvs={cvs}/>;
+    } else {
+      page = <CustomizeEdit
+        cv={cv}
+        session={session}
+        profile={profile}
+        onSave={(updated) => setCvs(cvs.map((c) => c.id === updated.id ? updated : c))}
+        onPreview={(cv) => navigate(`/cv/${cv.short_code || cv.id}`)}
+        toast={toast}
+        navigate={navigate}
+      />;
+    }
   } else if (route === "/app/analytics") {
     page = <Analytics cvs={cvs}/>;
   } else if (route === "/app/nfc") {
