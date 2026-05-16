@@ -61,15 +61,17 @@ const AnalyticsPreview = () => {
     { id: "interactions", label: t("landing.analytics.tab5") },
   ];
 
-  // Mock interactions récentes — réplique exacte de la vraie liste analytics
-  // (recruteur + entreprise + message court, pas de timestamps puisqu'on ne
-  // les affiche pas non plus dans la vraie page).
+  // Mock interactions récentes — réplique exacte du tableau analytics
+  // Chaque entrée a recruteur, entreprise, type, message, rdv (exchange),
+  // when (texte relatif déjà calculé) et cv_name (eyebrow).
   const interactions = [
-    { name: "Lucas Martin",   company: "Hôtel Lutetia",       action: t("landing.analytics.inter.exchange"), message: "Profil intéressant, disponible pour un échange cette semaine ?", type: "exchange" },
-    { name: "Sophie Renaud",  company: "Maison Bréguet",      action: t("landing.analytics.inter.comment"),  message: "Votre vocal est très clair et professionnel, bravo.",            type: "feedback" },
-    { name: "Marie Lopez",    company: "Garorock Festival",   action: t("landing.analytics.inter.exchange"), message: "Souhaite vous rencontrer pour la saison estivale.",              type: "exchange" },
-    { name: "Thomas Dubois",  company: "Institut IES Jaroso", action: t("landing.analytics.inter.comment"),  message: "Excellente présentation, on revient vers vous.",                 type: "feedback" },
+    { name: "Lucas Martin",   company: "Hôtel Lutetia",       type: "exchange", message: "Profil intéressant, disponible pour un échange cette semaine ?", rdv: "24/05/2026 à 10:00", when: "il y a 2 h",   cv_name: "CV Hôtellerie" },
+    { name: "Sophie Renaud",  company: "Maison Bréguet",      type: "feedback", message: "Votre vocal est très clair et professionnel, bravo.",            rdv: null,                  when: "il y a 5 h",   cv_name: "CV Hôtellerie" },
+    { name: "Marie Lopez",    company: "Garorock Festival",   type: "exchange", message: "Souhaite vous rencontrer pour la saison estivale.",              rdv: "28/05/2026 à 14:30", when: "hier",         cv_name: "CV Événementiel" },
+    { name: "Thomas Dubois",  company: "Institut IES Jaroso", type: "feedback", message: "Excellente présentation, on revient vers vous.",                 rdv: null,                  when: "il y a 2 j",   cv_name: "CV Hôtellerie" },
   ];
+  const labelExchange = "Échange";
+  const labelFeedback = "Commentaire";
 
   const channels = [
     { label: "WhatsApp", value: 42, brand: "whatsapp" },
@@ -192,32 +194,52 @@ const AnalyticsPreview = () => {
       )}
 
       {tab === "interactions" && (
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {interactions.map((it, idx) => {
-            const isExchange = it.type === "exchange";
-            return (
-              <div key={idx} style={{ display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "flex-start", gap: 14, padding: "14px 0", borderTop: idx > 0 ? "1px solid var(--border-soft)" : "none" }}>
-                <div style={{
-                  width: 38, height: 38, borderRadius: "50%",
-                  background: isExchange ? "var(--ink)" : "var(--gold-soft)",
-                  color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
-                }}>
-                  {isExchange ? <I.ThumbsUp size={16}/> : <I.Feedback size={16}/>}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>
-                    {it.name}
-                    <span className="muted" style={{ fontWeight: 400 }}> · {it.company}</span>
-                    <span className="muted" style={{ fontWeight: 400 }}> {it.action}</span>
-                  </div>
-                  <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 4, lineHeight: 1.45 }}>
-                    « {it.message} »
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ textAlign: "left", color: "var(--muted)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500 }}>
+                <th style={{ padding: "10px 12px 10px 0", borderBottom: "1px solid var(--border)" }}>Recruteur</th>
+                <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>Action</th>
+                <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>Message</th>
+                <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>RDV</th>
+                <th style={{ padding: "10px 0 10px 12px", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap", textAlign: "right" }}>Quand</th>
+              </tr>
+            </thead>
+            <tbody>
+              {interactions.map((it, idx) => {
+                const isExchange = it.type === "exchange";
+                return (
+                  <tr key={idx} style={{ borderBottom: "1px solid var(--border-soft)" }}>
+                    <td style={{ padding: "14px 12px 14px 0", verticalAlign: "top" }}>
+                      <div style={{ fontWeight: 500, color: "var(--ink)" }}>{it.name}</div>
+                      <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{it.company}</div>
+                      <div className="muted" style={{ fontSize: 10.5, marginTop: 4, letterSpacing: "0.08em", textTransform: "uppercase" }}>{it.cv_name}</div>
+                    </td>
+                    <td style={{ padding: "14px 12px", verticalAlign: "top" }}>
+                      <span style={{
+                        display: "inline-flex", alignItems: "center", gap: 6,
+                        fontSize: 12, padding: "4px 10px", borderRadius: 999, fontWeight: 500, whiteSpace: "nowrap",
+                        background: isExchange ? "var(--ink)" : "var(--gold-soft)",
+                        color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
+                      }}>
+                        {isExchange ? <I.ThumbsUp size={11}/> : <I.Feedback size={11}/>}
+                        {isExchange ? labelExchange : labelFeedback}
+                      </span>
+                    </td>
+                    <td style={{ padding: "14px 12px", verticalAlign: "top", color: "var(--ink-2)", lineHeight: 1.5, fontStyle: "italic" }}>
+                      « {it.message} »
+                    </td>
+                    <td style={{ padding: "14px 12px", verticalAlign: "top", whiteSpace: "nowrap", color: it.rdv ? "var(--gold-deep)" : "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
+                      {it.rdv || '—'}
+                    </td>
+                    <td style={{ padding: "14px 0 14px 12px", verticalAlign: "top", whiteSpace: "nowrap", textAlign: "right", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
+                      {it.when}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
