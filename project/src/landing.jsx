@@ -47,6 +47,20 @@ const StepCard = ({ n, title, body }) => (
   </div>
 );
 
+// ShareCard — variante du StepCard avec icône à la place du numéro
+const ShareCard = ({ icon, title, body }) => {
+  const Ico = I[icon];
+  return (
+    <div className="card" style={{ padding: 26 }}>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--gold-soft)", color: "var(--gold-deep)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {Ico && <Ico size={20}/>}
+      </div>
+      <h3 className="display" style={{ fontSize: 20, margin: "14px 0 8px", fontWeight: 500 }}>{title}</h3>
+      <p style={{ margin: 0, color: "var(--muted)", fontSize: 14, lineHeight: 1.55 }}>{body}</p>
+    </div>
+  );
+};
+
 // AnalyticsPreview — mini-dashboard avec données mockées + onglets
 // Mime le vrai dashboard Analytics pour montrer ce que l'user obtient.
 const AnalyticsPreview = () => {
@@ -307,18 +321,40 @@ const Landing = ({ navigate }) => {
       </section>
 
       <section id="fonctionnement" style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px" }}>
-        <div className="between" style={{ alignItems: "flex-end", flexWrap: "wrap", gap: 24, marginBottom: 36 }}>
+        <div className="between" style={{ alignItems: "flex-end", flexWrap: "wrap", gap: 24, marginBottom: 48 }}>
           <div>
             <div className="eyebrow">{t("landing.how.eyebrow")}</div>
             <h2 className="display" style={{ fontSize: 52, margin: "10px 0 0", fontWeight: 500 }}>{t("landing.how.title1")} <em className="display-italic">{t("landing.how.title2")}</em></h2>
           </div>
           <p className="muted" style={{ maxWidth: 360, margin: 0 }}>{t("landing.how.intro")}</p>
         </div>
-        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-          <StepCard n="01" title={t("landing.how.s1t")} body={t("landing.how.s1b")}/>
-          <StepCard n="02" title={t("landing.how.s2t")} body={t("landing.how.s2b")}/>
-          <StepCard n="03" title={t("landing.how.s3t")} body={t("landing.how.s3b")}/>
-          <StepCard n="04" title={t("landing.how.s4t")} body={t("landing.how.s4b")}/>
+
+        {/* Sous-section 1 : Préparation (2 étapes) */}
+        <div style={{ marginBottom: 56 }}>
+          <div className="row gap-12" style={{ marginBottom: 18, alignItems: "baseline" }}>
+            <span className="display-italic" style={{ fontSize: 22, color: "var(--gold-deep)" }}>i.</span>
+            <div className="eyebrow" style={{ color: "var(--gold-deep)" }}>{t("landing.how.prepEyebrow")}</div>
+            <h3 className="display" style={{ margin: 0, fontSize: 26, fontWeight: 500 }}>{t("landing.how.prepTitle")}</h3>
+          </div>
+          <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+            <StepCard n="01" title={t("landing.how.s1t")} body={t("landing.how.s1b")}/>
+            <StepCard n="02" title={t("landing.how.s2t")} body={t("landing.how.s2b")}/>
+          </div>
+        </div>
+
+        {/* Sous-section 2 : Partage (4 façons) */}
+        <div>
+          <div className="row gap-12" style={{ marginBottom: 18, alignItems: "baseline" }}>
+            <span className="display-italic" style={{ fontSize: 22, color: "var(--gold-deep)" }}>ii.</span>
+            <div className="eyebrow" style={{ color: "var(--gold-deep)" }}>{t("landing.how.shareEyebrow")}</div>
+            <h3 className="display" style={{ margin: 0, fontSize: 26, fontWeight: 500 }}>{t("landing.how.shareTitle")}</h3>
+          </div>
+          <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+            <ShareCard icon="Cv"    title={t("landing.how.sh1t")} body={t("landing.how.sh1b")}/>
+            <ShareCard icon="Phone" title={t("landing.how.sh2t")} body={t("landing.how.sh2b")}/>
+            <ShareCard icon="Wifi"  title={t("landing.how.sh3t")} body={t("landing.how.sh3b")}/>
+            <ShareCard icon="Copy"  title={t("landing.how.sh4t")} body={t("landing.how.sh4b")}/>
+          </div>
         </div>
       </section>
 
