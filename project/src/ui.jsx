@@ -80,84 +80,39 @@ function useIsMobile(breakpoint = 600) {
 window.useIsMobile = useIsMobile;
 
 const Modal = ({ open, onClose, children, width, padding, zIndex }) => {
-  const backdropRef = useRef(null);
-
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape" && open) onClose && onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
-
-  // Quand le modal s'ouvre :
-  //  1. Force iOS à reset le zoom à 1× et le verrouille pendant l'ouverture
-  //     (sinon : le modal s'affiche cassé si la page était zoomée)
-  //  2. Verrouille le scroll du body — pattern iOS : position:fixed + top:-scrollY
-  //     (sinon : scroller dans le modal scrolle la page derrière)
-  // À la fermeture : on restaure tout + on remet la scroll position.
-  useEffect(() => {
-    if (!open) return;
-
-    // 1) Lock zoom + force reset à 1×
-    const meta = document.querySelector('meta[name="viewport"]');
-    const originalViewport = meta ? meta.getAttribute("content") : "width=device-width, initial-scale=1";
-    if (meta) meta.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover");
-
-    // 2) Lock body scroll
-    const scrollY = window.scrollY;
-    const prevBody = {
-      overflow: document.body.style.overflow,
-      position: document.body.style.position,
-      top: document.body.style.top,
-      width: document.body.style.width,
-    };
-    document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = "-" + scrollY + "px";
-    document.body.style.width = "100%";
-
-    return () => {
-      if (meta) meta.setAttribute("content", originalViewport);
-      document.body.style.overflow = prevBody.overflow;
-      document.body.style.position = prevBody.position;
-      document.body.style.top = prevBody.top;
-      document.body.style.width = prevBody.width;
-      window.scrollTo(0, scrollY);
-    };
-  }, [open]);
-
-  // visualViewport API : si le clavier iOS apparaît dans le modal, on garde
-  // le backdrop aligné sur la zone visible (pas en-dessous du clavier).
-  useEffect(() => {
-    if (!open) return;
-    const vv = window.visualViewport;
-    const bd = backdropRef.current;
-    if (!vv || !bd) return;
-
-    const sync = () => {
-      bd.style.top = vv.offsetTop + "px";
-      bd.style.left = vv.offsetLeft + "px";
-      bd.style.right = "auto";
-      bd.style.bottom = "auto";
-      bd.style.width = vv.width + "px";
-      bd.style.height = vv.height + "px";
-    };
-    sync();
-    vv.addEventListener("resize", sync);
-    vv.addEventListener("scroll", sync);
-    return () => {
-      vv.removeEventListener("resize", sync);
-      vv.removeEventListener("scroll", sync);
-      bd.style.top = ""; bd.style.left = ""; bd.style.right = ""; bd.style.bottom = "";
-      bd.style.width = ""; bd.style.height = "";
-    };
-  }, [open]);
-
   return (
-    <div ref={backdropRef} className={"modal-backdrop" + (open ? " is-open" : "")} onClick={onClose} style={zIndex ? { zIndex } : undefined}>
+    <div className={"modal-backdrop" + (open ? " is-open" : "")} onClick={onClose} style={zIndex ? { zIndex } : undefined}>
       <div className="modal" style={{ maxWidth: width || 920, padding: padding ?? 0 }} onClick={(e) => e.stopPropagation()}>
         <button className="modal__close" onClick={onClose} aria-label="Fermer">
           <I.Close size={16}/>
         </button>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+// FullPage — alternative à Modal pour les vues plein écran sur mobile
+// (PresentModal, AddCVModal). Pas de backdrop semi-transparent, pas de
+// problème de zoom iOS — c'est juste une page qui couvre tout le viewport.
+const FullPage = ({ open, onClose, children, zIndex }) => {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape" && open) onClose && onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div className="fullpage" style={zIndex ? { zIndex } : undefined}>
+      <button className="fullpage__close" onClick={onClose} aria-label="Fermer">
+        <I.Close size={16}/>
+      </button>
+      <div className="fullpage__content">
         {children}
       </div>
     </div>

@@ -84,13 +84,14 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
   const qrSize = isMobile ? 150 : 180;
   const qrPadding = isMobile ? 10 : 18;
 
+  if (!open) return null;
   return (
-    <Modal open={open} onClose={onClose} width={isMobile ? 500 : 920}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 0 }}>
-        <div style={{ padding: isMobile ? "24px 24px 16px" : 48, background: "var(--bg-soft)", borderRadius: isMobile ? "22px 22px 0 0" : "22px 0 0 22px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {cv.cv_url ? <ImagePreview url={cv.cv_url} width={isMobile ? 200 : 300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={isMobile ? 0.75 : 1.05}/>}
+    <FullPage open={open} onClose={onClose}>
+      <div style={{ display: isMobile ? "block" : "grid", gridTemplateColumns: isMobile ? undefined : "1fr 1fr", gap: 0, maxWidth: isMobile ? "100%" : 920, margin: "0 auto", minHeight: isMobile ? "100vh" : undefined }}>
+        <div style={{ padding: isMobile ? "60px 20px 24px" : 48, background: "var(--bg-soft)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {cv.cv_url ? <ImagePreview url={cv.cv_url} width={isMobile ? 220 : 300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={isMobile ? 0.8 : 1.05}/>}
         </div>
-        <div style={{ padding: isMobile ? "20px 24px 28px" : "56px 48px 48px", borderRadius: isMobile ? "0 0 22px 22px" : "0 22px 22px 0" }}>
+        <div style={{ padding: isMobile ? "28px 24px 40px" : "56px 48px 48px" }}>
           <div className="eyebrow">{t("cvs.modal.present.eyebrow")}</div>
           <h2 className="display" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 500, margin: "10px 0 14px", fontStyle: "italic" }}>{cv.name}</h2>
           <p className="muted" style={{ marginBottom: 20, fontSize: 14, lineHeight: 1.55 }}>
@@ -104,7 +105,7 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
           </button>
         </div>
       </div>
-    </Modal>
+    </FullPage>
   );
 };
 
@@ -330,9 +331,10 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
       .catch((err) => { setSaving(false); setError(err.message || "Une erreur est survenue lors de la création du CV."); });
   };
 
+  if (!open) return null;
   return (
-    <Modal open={open} onClose={onClose} width={560}>
-      <div style={{ padding: isMobile ? 24 : 40 }}>
+    <FullPage open={open} onClose={onClose}>
+      <div style={{ padding: isMobile ? "60px 20px 40px" : 40, maxWidth: 560, margin: "0 auto" }}>
         <div className="eyebrow">{t("cvs.modal.add.eyebrow")}</div>
         <h2 className="display" style={{ fontSize: isMobile ? 26 : 32, margin: "8px 0 6px", fontWeight: 500 }}>{t("cvs.modal.add.title")}</h2>
         <p className="muted" style={{ marginBottom: 20, fontSize: 14 }}>{t("cvs.modal.add.sub")}</p>
@@ -390,7 +392,7 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
           </div>
         </form>
       </div>
-    </Modal>
+    </FullPage>
   );
 };
 
