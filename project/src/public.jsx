@@ -339,17 +339,17 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
               {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => {
                 if (shortCode) api.incrementStat(shortCode, 'clic_linkedin');
                 const safe = safeExternalUrl(cv.contact.linkedin);
-                if (safe) window.open(safe, '_blank', 'noopener,noreferrer');
+                if (safe) window.location.href = safe;
               }} />}
               {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" onClick={() => {
                 if (shortCode) api.incrementStat(shortCode, 'clic_instagram');
                 const safe = safeExternalUrl(cv.contact.instagram);
-                if (safe) window.open(safe, '_blank', 'noopener,noreferrer');
+                if (safe) window.location.href = safe;
               }} />}
               {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" onClick={() => {
                 if (shortCode) api.incrementStat(shortCode, 'clic_site_web');
                 const safe = safeExternalUrl(cv.contact.website);
-                if (safe) window.open(safe, '_blank', 'noopener,noreferrer');
+                if (safe) window.location.href = safe;
               }} />}
             </div>
           </div>
