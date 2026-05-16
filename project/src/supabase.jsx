@@ -200,13 +200,35 @@ const api = {
   },
 
   deleteCv(cvId) {
-    return sb
-      .from('cvs')
-      .delete()
-      .eq('id', cvId)
-      .then(({ error }) => {
-        if (error) throw error;
-      });
+    // Supprime aussi les fichiers storage (image CV + audio) pour éviter les
+    // fichiers orphelins. On liste le dossier {userId}/{cvId}/ dans chaque bucket
+    // puis on supprime tout — comme ça même les anciennes versions sont nettoyées.
+    return sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session) throw new Error("Not authenticated");
+      const userId = session.user.id;
+      const folder = `${userId}/${cvId}`;
+
+      const purgeBucket = (bucket) =>
+        sb.storage.from(bucket).list(folder).then(({ data, error }) => {
+          if (error) { console.warn(`storage list failed (${bucket}):`, error.message); return; }
+          if (!data || data.length === 0) return;
+          const paths = data.map((f) => `${folder}/${f.name}`);
+          return sb.storage.from(bucket).remove(paths).then(({ error: rmErr }) => {
+            if (rmErr) console.warn(`storage remove failed (${bucket}):`, rmErr.message);
+          });
+        });
+
+      // 1) Purge storage (best-effort, ne bloque pas le delete DB)
+      // 2) Delete DB row (doit réussir)
+      return Promise.all([
+        purgeBucket('cvs-files'),
+        purgeBucket('audio-files'),
+      ]).then(() =>
+        sb.from('cvs').delete().eq('id', cvId).then(({ error }) => {
+          if (error) throw error;
+        })
+      );
+    });
   },
 
   getCvByShortCode(shortCode) {
