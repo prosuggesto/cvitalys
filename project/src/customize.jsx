@@ -22,16 +22,28 @@ const CustomizeSelectCard = ({ cv, onClick }) => {
       </div>
       <span className="badge">{cv.role}</span>
     </div>
-    {cv.cv_url ? (
-      <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "6px 0 10px" : "8px 0 14px" }}>
+    <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "6px 0 10px" : "8px 0 14px" }}>
+      {cv.cv_url ? (
         <ImagePreview url={cv.cv_url} width={isMobile ? 200 : 260} float3d={true}/>
-      </div>
-    ) : (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: "24px 0", border: "1px dashed var(--border-strong)", borderRadius: 12, color: "var(--muted)" }}>
-        <I.Cv size={24} stroke="var(--subtle)"/>
-        <div style={{ fontSize: 13 }}>Aucun CV importé</div>
-      </div>
-    )}
+      ) : (
+        <div style={{
+          width: isMobile ? 200 : 260,
+          aspectRatio: "1 / 1.414",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+          border: "2px dashed var(--border-strong)",
+          borderRadius: 12,
+          color: "var(--muted)",
+          background: "var(--surface-2)"
+        }}>
+          <I.Cv size={32} stroke="var(--subtle)"/>
+          <div style={{ fontSize: 13 }}>Aucun CV importé</div>
+        </div>
+      )}
+    </div>
     <div className="between" style={{ flexWrap: "wrap", gap: 8 }}>
       <span className="muted" style={{ fontSize: 13 }}>{t("custom.select.click")}</span>
       <span className="row gap-8" style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>
@@ -51,7 +63,7 @@ const CustomizeSelect = ({ cvs, navigate }) => {
         title={t("custom.select.title")}
         subtitle={t("custom.select.sub")} />
     <div className="grid" style={{
-      gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, 400px)",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, 360px)",
       justifyContent: isMobile ? undefined : "start",
       gap: isMobile ? 16 : 20
     }}>
@@ -281,18 +293,31 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
                 </div>
               </React.Fragment>
             ) : (
-              <div className="card-empty" style={{ padding: "32px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
-                <I.Cv size={32} stroke="var(--subtle)" />
-                <div className="muted" style={{ fontSize: 14 }}>{t("custom.cvNoneText")}</div>
-                <button className="btn btn--primary btn--sm" onClick={() => fileInputRef.current.click()}>
-                  <I.Upload size={14} /> Importer mon CV (JPEG)
-                </button>
-                <div style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 280 }}>
-                  JPEG — une seule page recto
+              <div style={{ display: "flex", justifyContent: "center", padding: "12px 0" }}>
+                <div className="card-empty" style={{
+                  width: 280,
+                  aspectRatio: "1 / 1.414",
+                  padding: 20,
+                  textAlign: "center",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 14,
+                  background: "var(--surface-2)"
+                }}>
+                  <I.Cv size={36} stroke="var(--subtle)" />
+                  <div className="muted" style={{ fontSize: 14 }}>{t("custom.cvNoneText")}</div>
+                  <button className="btn btn--primary btn--sm" onClick={() => fileInputRef.current.click()}>
+                    <I.Upload size={14} /> Importer mon CV (JPEG)
+                  </button>
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    JPEG — une seule page recto
+                  </div>
+                  <input type="file" accept="image/jpeg,image/png,image/webp" ref={fileInputRef} hidden onChange={(e) => {
+                    if (e.target.files[0]) { setPendingFile(e.target.files[0]); update({ hasFile: true }); toast(t("custom.cvImported")); }
+                  }} />
                 </div>
-                <input type="file" accept="image/jpeg,image/png,image/webp" ref={fileInputRef} hidden onChange={(e) => {
-                  if (e.target.files[0]) { setPendingFile(e.target.files[0]); update({ hasFile: true }); toast(t("custom.cvImported")); }
-                }} />
               </div>
             )}
           </div>
