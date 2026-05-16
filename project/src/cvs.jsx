@@ -85,27 +85,39 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
   const qrPadding = isMobile ? 10 : 18;
 
   if (!open) return null;
-  return (
-    <FullPage open={open} onClose={onClose}>
-      <div style={{ display: isMobile ? "block" : "grid", gridTemplateColumns: isMobile ? undefined : "1fr 1fr", gap: 0, maxWidth: isMobile ? "100%" : 920, margin: "0 auto", minHeight: isMobile ? "100vh" : undefined }}>
-        <div style={{ padding: isMobile ? "60px 20px 24px" : 48, background: "var(--bg-soft)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {cv.cv_url ? <ImagePreview url={cv.cv_url} width={isMobile ? 220 : 300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={isMobile ? 0.8 : 1.05}/>}
-        </div>
-        <div style={{ padding: isMobile ? "28px 24px 40px" : "56px 48px 48px" }}>
-          <div className="eyebrow">{t("cvs.modal.present.eyebrow")}</div>
-          <h2 className="display" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 500, margin: "10px 0 14px", fontStyle: "italic" }}>{cv.name}</h2>
-          <p className="muted" style={{ marginBottom: 20, fontSize: 14, lineHeight: 1.55 }}>
-            {t("cvs.modal.present.body")}
-          </p>
-          <div style={{ padding: qrPadding, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, display: "flex", justifyContent: "center", width: "fit-content", margin: "0 auto" }}>
-            <QRBlock size={qrSize} url={publicUrl} cachedSrc={qrSrc}/>
-          </div>
-          <button className="btn btn--primary btn--block btn--lg" style={{ marginTop: 18 }} onClick={handleCopy}>
-            <I.Share size={16}/> {t("common.share")}
-          </button>
-        </div>
+
+  const content = (
+    <>
+      <div style={{ padding: isMobile ? "60px 20px 24px" : 48, background: "var(--bg-soft)", borderRadius: isMobile ? 0 : "22px 0 0 22px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {cv.cv_url ? <ImagePreview url={cv.cv_url} width={isMobile ? 220 : 300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={isMobile ? 0.8 : 1.05}/>}
       </div>
-    </FullPage>
+      <div style={{ padding: isMobile ? "28px 24px 40px" : "56px 48px 48px" }}>
+        <div className="eyebrow">{t("cvs.modal.present.eyebrow")}</div>
+        <h2 className="display" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 500, margin: "10px 0 14px", fontStyle: "italic" }}>{cv.name}</h2>
+        <p className="muted" style={{ marginBottom: 20, fontSize: 14, lineHeight: 1.55 }}>
+          {t("cvs.modal.present.body")}
+        </p>
+        <div style={{ padding: qrPadding, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, display: "flex", justifyContent: "center", width: "fit-content", margin: "0 auto" }}>
+          <QRBlock size={qrSize} url={publicUrl} cachedSrc={qrSrc}/>
+        </div>
+        <button className="btn btn--primary btn--block btn--lg" style={{ marginTop: 18 }} onClick={handleCopy}>
+          <I.Share size={16}/> {t("common.share")}
+        </button>
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <FullPage open={open} onClose={onClose}>
+        <div style={{ display: "block", minHeight: "100vh" }}>{content}</div>
+      </FullPage>
+    );
+  }
+  return (
+    <Modal open={open} onClose={onClose} width={920}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>{content}</div>
+    </Modal>
   );
 };
 
@@ -332,9 +344,9 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
   };
 
   if (!open) return null;
-  return (
-    <FullPage open={open} onClose={onClose}>
-      <div style={{ padding: isMobile ? "60px 20px 40px" : 40, maxWidth: 560, margin: "0 auto" }}>
+
+  const formContent = (
+    <div style={{ padding: isMobile ? "60px 20px 40px" : 40, maxWidth: 560, margin: "0 auto" }}>
         <div className="eyebrow">{t("cvs.modal.add.eyebrow")}</div>
         <h2 className="display" style={{ fontSize: isMobile ? 26 : 32, margin: "8px 0 6px", fontWeight: 500 }}>{t("cvs.modal.add.title")}</h2>
         <p className="muted" style={{ marginBottom: 20, fontSize: 14 }}>{t("cvs.modal.add.sub")}</p>
@@ -392,8 +404,12 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
           </div>
         </form>
       </div>
-    </FullPage>
   );
+
+  if (isMobile) {
+    return <FullPage open={open} onClose={onClose}>{formContent}</FullPage>;
+  }
+  return <Modal open={open} onClose={onClose} width={560}>{formContent}</Modal>;
 };
 
 const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
