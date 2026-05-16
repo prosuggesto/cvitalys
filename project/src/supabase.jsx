@@ -170,13 +170,12 @@ const api = {
     // Sinon un attaquant pourrait via DevTools faire pointer cv_url vers
     // attacker.com → fuite d'IP du recruteur, tracking, etc.
     const dbUpdates = {};
+    // NB: email/téléphone/whatsapp ne sont PAS dans la table cvs — ils viennent
+    // uniquement de la table profils. Ne pas les inclure ici.
     const keyMap = {
       nom_cv: 'nom_cv',
       poste_id: 'poste_id',
       secteur_id: 'secteur_id',
-      email_contact: 'email_contact',
-      telephone_contact: 'telephone_contact',
-      numero_whatsapp: 'numero_whatsapp',
       linkedin_url: 'linkedin_url',
       instagram_url: 'instagram_url',
       site_web_url: 'site_web_url',
@@ -234,15 +233,29 @@ const api = {
   },
 
   getCvByShortCode(shortCode) {
-    return sb
-      .from('cvs')
-      .select('*, postes(nom), secteurs(nom), profils(prenom, nom, email, telephone, langue_interface)')
-      .eq('jeton_public', shortCode)
-      .eq('est_public', true)
-      .single()
+    // Passe par la fonction SECURITY DEFINER get_public_cv qui :
+    //  - Ne retourne QUE les colonnes nécessaires (pas les stats, pas utilisateur_id)
+    //  - Joint poste/secteur/profil côté serveur (anon n'a pas besoin de RLS sur ces tables)
+    //  - Filtre déjà sur est_public = true
+    return sb.rpc('get_public_cv', { p_jeton_public: shortCode })
       .then(({ data, error }) => {
         if (error) throw error;
-        return data ? { cv: normalizeCv(data), profil: data.profils } : null;
+        if (!data || data.length === 0) return null;
+        const row = data[0];
+        // Reconstruction du shape attendu par normalizeCv (postes/secteurs imbriqués)
+        const cvRow = {
+          ...row,
+          postes: row.poste_nom ? { nom: row.poste_nom } : null,
+          secteurs: row.secteur_nom ? { nom: row.secteur_nom } : null,
+        };
+        const profil = (row.profil_prenom !== null || row.profil_nom !== null) ? {
+          prenom: row.profil_prenom,
+          nom: row.profil_nom,
+          email: row.profil_email,
+          telephone: row.profil_telephone,
+          langue_interface: row.profil_langue,
+        } : null;
+        return { cv: normalizeCv(cvRow), profil };
       });
   },
 
@@ -406,15 +419,14 @@ const api = {
   },
 
   getNfcByCode(codeCourtNfc) {
-    return sb
-      .from('nfc_cv')
-      .select('*, cvs(jeton_public)')
-      .eq('code_court', codeCourtNfc)
-      .eq('actif', true)
-      .single()
+    // Passe par la fonction SECURITY DEFINER get_nfc_by_code qui ne retourne
+    // QUE le CV ciblé (impossible d'énumérer toutes les cartes NFC du système)
+    return sb.rpc('get_nfc_by_code', { p_code_court: codeCourtNfc })
       .then(({ data, error }) => {
-        if (error) return null;
-        return data;
+        if (error || !data || data.length === 0) return null;
+        const row = data[0];
+        // Shape compatible avec l'appelant (NfcRedirect attend .cvs.jeton_public)
+        return { cvs: { jeton_public: row.cv_jeton_public } };
       });
   },
 
