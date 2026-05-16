@@ -87,12 +87,10 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
   return (
     <Modal open={open} onClose={onClose} width={isMobile ? 500 : 920}>
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 0 }}>
-        {!isMobile && (
-          <div style={{ padding: 48, background: "var(--bg-soft)", borderRadius: "22px 0 0 22px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {cv.cv_url ? <ImagePreview url={cv.cv_url} width={300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={1.05}/>}
-          </div>
-        )}
-        <div style={{ padding: isMobile ? "36px 24px 30px" : "56px 48px 48px", borderRadius: isMobile ? 22 : "0 22px 22px 0" }}>
+        <div style={{ padding: isMobile ? "24px 24px 16px" : 48, background: "var(--bg-soft)", borderRadius: isMobile ? "22px 22px 0 0" : "22px 0 0 22px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {cv.cv_url ? <ImagePreview url={cv.cv_url} width={isMobile ? 200 : 300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={isMobile ? 0.75 : 1.05}/>}
+        </div>
+        <div style={{ padding: isMobile ? "20px 24px 28px" : "56px 48px 48px", borderRadius: isMobile ? "0 0 22px 22px" : "0 22px 22px 0" }}>
           <div className="eyebrow">{t("cvs.modal.present.eyebrow")}</div>
           <h2 className="display" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 500, margin: "10px 0 14px", fontStyle: "italic" }}>{cv.name}</h2>
           <p className="muted" style={{ marginBottom: 20, fontSize: 14, lineHeight: 1.55 }}>
