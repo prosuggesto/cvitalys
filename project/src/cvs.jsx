@@ -45,7 +45,7 @@ const EmptyCVCard = ({ onClick }) => {
   );
 };
 
-const PresentModal = ({ cv, open, onClose, onCopy }) => {
+const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
   const { t } = useT();
   if (!cv) return null;
   const base = window.APP_URL || (window.location.origin + window.location.pathname);
@@ -71,7 +71,7 @@ const PresentModal = ({ cv, open, onClose, onCopy }) => {
             {t("cvs.modal.present.body")}
           </p>
           <div style={{ padding: 18, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18, display: "flex", justifyContent: "center" }}>
-            <QRBlock size={180} url={publicUrl}/>
+            <QRBlock size={180} url={publicUrl} cachedSrc={qrSrc}/>
           </div>
           {publicUrl && (
             <div style={{ marginTop: 14, fontSize: 12, color: "var(--muted)", textAlign: "center", fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>{publicUrl}</div>
@@ -216,6 +216,23 @@ const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
   const [addOpen, setAddOpen] = useState(false);
   const [deleting, setDeleting] = useState(null);
 
+  // Pré-générer les QR codes en arrière-plan dès que les CVs sont disponibles
+  // → affichage instantané quand l'utilisateur ouvre le modal "Présenter"
+  const qrCache = useRef({});
+  useEffect(() => {
+    if (!cvs.length) return;
+    const base = window.APP_URL || (window.location.origin + window.location.pathname);
+    const pregenerate = () => {
+      cvs.forEach((cv) => {
+        if (!cv.short_code || qrCache.current[cv.id]) return;
+        const url = `${base}#/cv/${cv.short_code}`;
+        generateQR(url, 180).then((dataUrl) => { qrCache.current[cv.id] = dataUrl; });
+      });
+    };
+    // Attendre que QRCode CDN soit disponible (il l'est normalement déjà)
+    window.QRCode ? pregenerate() : setTimeout(pregenerate, 500);
+  }, [cvs]);
+
   const handleDelete = (cv) => {
     if (!confirm(t("cvs.deleteConfirm", { name: cv.name }))) return;
     setDeleting(cv.id);
@@ -253,6 +270,7 @@ const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
       </div>
       <PresentModal
         cv={presentCv}
+        qrSrc={presentCv ? qrCache.current[presentCv.id] : null}
         open={!!presentCv}
         onClose={() => setPresentCv(null)}
         onCopy={() => { toast(t("common.copied")); }}

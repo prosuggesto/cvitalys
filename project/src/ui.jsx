@@ -32,37 +32,41 @@ const Field = ({ label, children, hint }) => (
   </div>
 );
 
-// QRBlock — génère un QR code via la lib CDN (canvas temp → dataURL) avec fallback service externe
-const QRBlock = ({ size = 200, url }) => {
-  const [imgSrc, setImgSrc] = useState('');
+// generateQR — génère un QR code et retourne une data URL (Promise)
+// Utilisé à la fois par QRBlock et pour la pré-génération en arrière-plan
+function generateQR(url, size) {
+  return new Promise((resolve) => {
+    const fallback = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&margin=2`;
+    if (!window.QRCode) { resolve(fallback); return; }
+    const canvas = document.createElement('canvas');
+    try {
+      QRCode.toCanvas(canvas, url, { width: size, margin: 2, color: { dark: '#1B1814', light: '#ffffff' } }, (err) => {
+        resolve(err ? fallback : canvas.toDataURL('image/png'));
+      });
+    } catch { resolve(fallback); }
+  });
+}
+
+// QRBlock — affiche un QR code. cachedSrc permet un affichage instantané (pré-généré).
+const QRBlock = ({ size = 200, url, cachedSrc }) => {
+  // Initialiser avec le cache si disponible → zéro délai
+  const [imgSrc, setImgSrc] = useState(cachedSrc || '');
 
   useEffect(() => {
+    if (cachedSrc) { setImgSrc(cachedSrc); return; }
     if (!url) { setImgSrc(''); return; }
-
-    const fallbackUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&margin=2`;
-
-    const generate = () => {
-      if (!window.QRCode) { setImgSrc(fallbackUrl); return; }
-      // Canvas temporaire hors DOM pour éviter les problèmes de timing
-      const canvas = document.createElement('canvas');
-      try {
-        QRCode.toCanvas(canvas, url, { width: size, margin: 2, color: { dark: '#1B1814', light: '#ffffff' } }, (err) => {
-          if (err) { console.warn('QR toCanvas error:', err); setImgSrc(fallbackUrl); }
-          else { setImgSrc(canvas.toDataURL('image/png')); }
-        });
-      } catch (e) {
-        setImgSrc(fallbackUrl);
-      }
-    };
-
-    // Attendre que la lib CDN soit chargée si nécessaire
-    if (window.QRCode) { generate(); } else { const t = setTimeout(generate, 400); return () => clearTimeout(t); }
-  }, [url, size]);
+    // Fallback : générer à la demande si le cache n'est pas encore prêt
+    const run = () => generateQR(url, size).then(setImgSrc);
+    window.QRCode ? run() : setTimeout(run, 400);
+  }, [url, size, cachedSrc]);
 
   if (!url) return <div style={{ width: size, height: size, background: "var(--bg-soft)", borderRadius: 8 }}/>;
   if (!imgSrc) return <div style={{ width: size, height: size, background: "var(--bg-soft)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ width: 24, height: 24, border: "2px solid var(--border)", borderTopColor: "var(--gold-deep)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }}/></div>;
   return <img src={imgSrc} width={size} height={size} alt="QR Code" style={{ display: "block", borderRadius: 8 }}/>;
 };
+
+// Exposé pour pré-génération depuis MesCV
+window.generateQR = generateQR;
 
 // Realistic A4 CV preview (PDF-style, two-column). Uses transform: scale() so
 // typography stays crisp at any size.
