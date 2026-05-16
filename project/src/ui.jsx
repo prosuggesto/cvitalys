@@ -274,19 +274,6 @@ const CVPreviewVisual = ({ cv, scale = 1, float3d = false }) => {
       }}>
         {/* LEFT sidebar */}
         <aside style={{ background: p.sidebar, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Avatar — initiales si user nommé, sinon silhouette SVG (landing mockup) */}
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#fff", border: `2px solid ${p.accent}`, margin: "2px auto 4px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", color: p.accent, fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 500 }}>
-            {(u.firstName && u.lastName)
-              ? `${u.firstName[0]}${u.lastName[0]}`
-              : (
-                <svg viewBox="0 0 64 64" width="64" height="64" style={{ display: "block" }}>
-                  <circle cx="32" cy="38" r="32" fill={p.soft}/>
-                  <circle cx="32" cy="24" r="10" fill={p.accent}/>
-                  <ellipse cx="32" cy="50" rx="16" ry="11" fill={p.accent}/>
-                </svg>
-              )}
-          </div>
-
           <div>
             <div style={{ fontSize: 6.5, letterSpacing: "0.14em", textTransform: "uppercase", color: p.accent, fontWeight: 600, marginBottom: 4 }}>{c.labels.about}</div>
             <div style={{ fontSize: 7, lineHeight: 1.4, color: "#3A3530" }}>{c.about}</div>
