@@ -27,6 +27,46 @@ const safeMailtoTarget = (raw) => {
   return s;
 };
 
+// Whitelist par domaine : protège contre l'impersonation (faux site qui imite
+// LinkedIn). Accepte la racine ET les sous-domaines (www.linkedin.com OK,
+// linkdin-phishing.com REJETÉ). Si l'utilisateur entre juste son pseudo,
+// on construit l'URL vers le domaine principal.
+const LINKEDIN_DOMAINS  = ["linkedin.com", "linkd.in", "linked.in"];
+const INSTAGRAM_DOMAINS = ["instagram.com", "ig.me", "instagr.am"];
+
+const matchesDomain = (hostname, allowed) => {
+  const h = hostname.toLowerCase();
+  return allowed.some((d) => h === d || h.endsWith("." + d));
+};
+
+// safeDomainUrl(raw, allowed, defaultDomain) :
+// - Si raw est une URL → vérifie que le domaine est dans la whitelist
+// - Si raw est juste un pseudo (sans / et sans .) → construit https://defaultDomain/<pseudo>
+// - Retourne null si rien de valide
+const safeDomainUrl = (raw, allowed, defaultDomain) => {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (!s) return null;
+
+  // Cas pseudo simple : ni "/" ni "." → on suppose que c'est un handle
+  if (!/[\/.]/.test(s)) {
+    const handle = s.replace(/^@/, "").replace(/[^A-Za-z0-9._\-]/g, "");
+    if (!handle) return null;
+    return `https://${defaultDomain}/${encodeURIComponent(handle)}`;
+  }
+
+  // Sinon, URL : valider scheme + domaine
+  const safe = safeExternalUrl(s);
+  if (!safe) return null;
+  try {
+    const u = new URL(safe);
+    if (!matchesDomain(u.hostname, allowed)) return null;
+    return safe;
+  } catch (_) {
+    return null;
+  }
+};
+
 const SecondaryContactBtn = ({ icon, brand, label, onClick }) => {
   const Ico = icon ? I[icon] : null;
   return (
@@ -338,15 +378,17 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
               }} />}
               {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => {
                 if (shortCode) api.incrementStat(shortCode, 'clic_linkedin');
-                const safe = safeExternalUrl(cv.contact.linkedin);
+                // Whitelist : seuls les domaines LinkedIn officiels sont acceptés
+                const safe = safeDomainUrl(cv.contact.linkedin, LINKEDIN_DOMAINS, "www.linkedin.com/in");
                 if (safe) window.location.href = safe;
               }} />}
               {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" onClick={() => {
                 if (shortCode) api.incrementStat(shortCode, 'clic_instagram');
-                const safe = safeExternalUrl(cv.contact.instagram);
+                // Whitelist : seuls les domaines Instagram officiels sont acceptés
+                const safe = safeDomainUrl(cv.contact.instagram, INSTAGRAM_DOMAINS, "www.instagram.com");
                 if (safe) window.location.href = safe;
               }} />}
-              {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" onClick={() => {
+              {cv.buttons.website && <SecondaryContactBtn icon="Globe" label={safeExternalUrl(cv.contact.website) || "Site web"} onClick={() => {
                 if (shortCode) api.incrementStat(shortCode, 'clic_site_web');
                 const safe = safeExternalUrl(cv.contact.website);
                 if (safe) window.location.href = safe;
