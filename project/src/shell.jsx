@@ -33,7 +33,7 @@ const Drawer = ({ open, onClose, user, currentRoute, navigate, onLogout }) => {
         </div>
       </div>
       <nav className="drawer__nav">
-        {NAV.map((n) => {
+        {NAV.filter((n) => n.id !== "account").map((n) => {
           const Ico = I[n.icon];
           const active = currentRoute && currentRoute.startsWith(n.route);
           return (
@@ -45,10 +45,17 @@ const Drawer = ({ open, onClose, user, currentRoute, navigate, onLogout }) => {
         })}
       </nav>
       <div style={{ marginTop: "auto", paddingTop: 18, borderTop: "1px solid var(--border-soft)" }}>
-        <button className="nav-item" onClick={onLogout}>
-          <I.Logout size={18} className="nav-icon"/>
-          <span>{t("nav.logout")}</span>
-        </button>
+        {(() => {
+          const account = NAV.find((n) => n.id === "account");
+          const Ico = I[account.icon];
+          const active = currentRoute && currentRoute.startsWith(account.route);
+          return (
+            <button className={"nav-item" + (active ? " is-active" : "")} onClick={() => { navigate(account.route); onClose(); }}>
+              <Ico size={18} className="nav-icon"/>
+              <span>{t(account.key)}</span>
+            </button>
+          );
+        })()}
       </div>
     </div>
   </React.Fragment>
