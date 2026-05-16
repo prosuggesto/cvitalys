@@ -154,7 +154,6 @@ const QRDownloadModal = ({ cv, open, onClose, onError }) => {
     if (!url) { reportError("Lien du CV indisponible."); return; }
     // Garde-fou DoS : URL trop longue pourrait faire planter QRCode
     if (url.length > 512) { reportError("Lien du CV invalide."); return; }
-    if (!window.QRCode) { reportError("Composant indisponible. Veuillez recharger la page."); return; }
 
     const palette = QR_PALETTES.find((p) => p.key === selected) || QR_PALETTES[0];
     const safeName = sanitizeFilename(cv.name);
@@ -162,6 +161,14 @@ const QRDownloadModal = ({ cv, open, onClose, onError }) => {
     setDownloading(true);
 
     try {
+      // Charge dynamiquement la lib QRCode si pas encore disponible
+      // (essaie local + 3 CDN fallbacks). Indispensable si Edge Tracking Prevention
+      // bloque le script tag initial ou si le déploiement n'est pas à jour.
+      const ok = await ensureQRCode(5000);
+      if (!ok || !window.QRCode) {
+        reportError("Impossible de charger le générateur de QR. Vérifiez votre connexion.");
+        return; // finally remet setDownloading(false)
+      }
       // 1) Génère QR en SVG vectoriel (qualité 4K garantie quel que soit le scale)
       const svgString = await new Promise((resolve, reject) => {
         QRCode.toString(url, {
