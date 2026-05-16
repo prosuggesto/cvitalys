@@ -21,9 +21,8 @@ const NFCPage = ({ cvs, session, toast }) => {
 
   // Utiliser la première carte NFC si elle existe
   const nfcCard = nfcCards[0] || null;
-  const link = nfcCard
-    ? `${window.location.origin}${window.location.pathname}#/nfc/${nfcCard.code_court}`
-    : null;
+  const base = window.APP_URL || (window.location.origin + window.location.pathname);
+  const link = nfcCard ? `${base}#/nfc/${nfcCard.code_court}` : null;
 
   const handleCreate = () => {
     if (!session || !selectedCvId) return;

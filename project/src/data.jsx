@@ -1,3 +1,6 @@
+// URL de base de l'application en production — utilisé pour les QR codes et les liens NFC
+window.APP_URL = 'https://cvitalys.vercel.app/';
+
 // Backward compat shim — real data comes from Supabase via api (supabase.jsx)
 // Les composants utilisent window.MOCK pour affichage du preview CV (initiales, etc.)
 // Ces valeurs sont écrasées dynamiquement dans app.jsx dès que le profil est chargé.

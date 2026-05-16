@@ -48,9 +48,8 @@ const EmptyCVCard = ({ onClick }) => {
 const PresentModal = ({ cv, open, onClose, onCopy }) => {
   const { t } = useT();
   if (!cv) return null;
-  const publicUrl = cv.short_code
-    ? `${window.location.origin}${window.location.pathname}#/cv/${cv.short_code}`
-    : null;
+  const base = window.APP_URL || (window.location.origin + window.location.pathname);
+  const publicUrl = cv.short_code ? `${base}#/cv/${cv.short_code}` : null;
 
   const handleCopy = () => {
     if (publicUrl) {
