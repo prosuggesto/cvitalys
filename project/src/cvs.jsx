@@ -96,22 +96,45 @@ const QR_PALETTES = [
   { key: "green",    label: "Vert",        dark: "#15803D", light: "#FFFFFF", preview: ["#15803D", "#FFFFFF"] },
 ];
 
-const QRDownloadModal = ({ cv, open, onClose }) => {
+// Validation stricte du short_code : alphanumeric uniquement, 4-32 chars
+// → empêche toute injection dans l'URL (caractères de contrôle, fragments, etc.)
+const SHORT_CODE_RE = /^[A-Za-z0-9]{4,32}$/;
+
+// Sanitisation du nom pour usage dans un nom de fichier :
+// - retire caractères Unicode "non-fichier" : /, \, :, *, ?, ", <, >, |, contrôles, ..
+// - limite à 40 chars
+// - fallback "cv" si vide après nettoyage
+const sanitizeFilename = (raw) => {
+  const cleaned = String(raw || "")
+    .normalize("NFKD")
+    .replace(/[\\/:*?"<>|\x00-\x1f]/g, "")   // caractères interdits FS + contrôles
+    .replace(/\.{2,}/g, "")                   // empêche path traversal
+    .replace(/\s+/g, "_")
+    .replace(/^[._]+|[._]+$/g, "")            // pas de leading/trailing . ou _
+    .slice(0, 40)
+    .trim();
+  return cleaned || "cv";
+};
+
+const QRDownloadModal = ({ cv, open, onClose, onError }) => {
   const { t } = useT();
   const [selected, setSelected] = useState("classic");
   const [downloading, setDownloading] = useState(false);
 
   if (!cv) return null;
+
+  // Validation stricte du short_code avant construction d'URL
+  const shortCode = cv.short_code && SHORT_CODE_RE.test(cv.short_code) ? cv.short_code : null;
   const base = window.APP_URL || (window.location.origin + window.location.pathname);
-  const url = cv.short_code ? `${base}#/cv/${cv.short_code}` : null;
+  // encodeURIComponent en bonus (même si shortCode est déjà validé alphanumeric)
+  const url = shortCode ? `${base}#/cv/${encodeURIComponent(shortCode)}` : null;
 
   const triggerBlobDownload = (blob, filename) => {
-    console.log("[QR] triggerBlobDownload", { size: blob.size, type: blob.type, filename });
     const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.download = filename;
     link.href = blobUrl;
-    link.rel = "noopener";
+    link.rel = "noopener noreferrer";
     link.style.display = "none";
     document.body.appendChild(link);
     link.click();
@@ -121,13 +144,21 @@ const QRDownloadModal = ({ cv, open, onClose }) => {
     }, 200);
   };
 
+  const reportError = (userMsg) => {
+    // Affiche un message générique à l'utilisateur, sans révéler de détails techniques
+    if (typeof onError === "function") onError(userMsg);
+    else alert(userMsg);
+  };
+
   const handleDownload = async () => {
-    console.log("[QR] handleDownload click", { url, selected, hasQRCode: !!window.QRCode });
-    if (!url) { alert("URL du CV introuvable."); return; }
-    if (!window.QRCode) { alert("Librairie QR non chargée. Rechargez la page."); return; }
+    if (!url) { reportError("Lien du CV indisponible."); return; }
+    // Garde-fou DoS : URL trop longue pourrait faire planter QRCode
+    if (url.length > 512) { reportError("Lien du CV invalide."); return; }
+    if (!window.QRCode) { reportError("Composant indisponible. Veuillez recharger la page."); return; }
 
     const palette = QR_PALETTES.find((p) => p.key === selected) || QR_PALETTES[0];
-    const filename = `QR_CVitalis_${(cv.name || "cv").replace(/\s+/g, "_")}.png`;
+    const safeName = sanitizeFilename(cv.name);
+    const filename = `QR_CVitalis_${safeName}.png`;
     setDownloading(true);
 
     try {
@@ -140,30 +171,31 @@ const QRDownloadModal = ({ cv, open, onClose }) => {
           color: { dark: palette.dark, light: "#ffffff" },
         }, (err, svg) => err ? reject(err) : resolve(svg));
       });
-      console.log("[QR] SVG generated, length:", svgString.length);
 
-      // 2) Charge le SVG dans une <img>
+      // 2) Charge le SVG dans une <img> (sandboxé : pas d'exécution de script SVG)
       const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
       const svgUrl = URL.createObjectURL(svgBlob);
-      const img = await new Promise((resolve, reject) => {
-        const i = new Image();
-        i.onload = () => resolve(i);
-        i.onerror = (e) => reject(new Error("SVG load failed"));
-        i.src = svgUrl;
-      });
-      console.log("[QR] SVG image loaded");
+      let img;
+      try {
+        img = await new Promise((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error("SVG load failed"));
+          i.src = svgUrl;
+        });
+      } finally {
+        URL.revokeObjectURL(svgUrl); // libère mémoire même en cas d'erreur
+      }
 
-      // 3) Dessine sur un canvas 2048×2048 (4K) — laisse le fond transparent
+      // 3) Dessine sur un canvas 2048×2048 (4K) — fond transparent
       const SIZE = 2048;
       const canvas = document.createElement("canvas");
       canvas.width = SIZE;
       canvas.height = SIZE;
       const ctx = canvas.getContext("2d");
-      ctx.imageSmoothingEnabled = false; // pixels nets, pas d'anti-aliasing flou
-      ctx.clearRect(0, 0, SIZE, SIZE);    // fond transparent garanti
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, SIZE, SIZE);
       ctx.drawImage(img, 0, 0, SIZE, SIZE);
-      URL.revokeObjectURL(svgUrl);
-      console.log("[QR] Canvas drawn at 2048×2048");
 
       // 4) Élimine tout pixel blanc résiduel → transparence parfaite
       const imgData = ctx.getImageData(0, 0, SIZE, SIZE);
@@ -177,13 +209,13 @@ const QRDownloadModal = ({ cv, open, onClose }) => {
       const blob = await new Promise((resolve, reject) => {
         canvas.toBlob((b) => b ? resolve(b) : reject(new Error("toBlob returned null")), "image/png");
       });
-      console.log("[QR] PNG blob ready", blob.size, "bytes");
 
       // 6) Trigger download
       triggerBlobDownload(blob, filename);
     } catch (e) {
-      console.error("[QR] Download error:", e);
-      alert("Erreur lors du téléchargement : " + (e.message || e));
+      // Log technique en console (dev only), message générique à l'utilisateur
+      if (typeof console !== "undefined" && console.error) console.error("[QR] download failed");
+      reportError("Téléchargement impossible. Veuillez réessayer.");
     } finally {
       setDownloading(false);
     }
@@ -436,6 +468,7 @@ const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
         cv={downloadCv}
         open={!!downloadCv}
         onClose={() => setDownloadCv(null)}
+        onError={(msg) => toast(msg)}
       />
     </div>
   );
