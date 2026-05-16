@@ -80,13 +80,46 @@ function useIsMobile(breakpoint = 600) {
 window.useIsMobile = useIsMobile;
 
 const Modal = ({ open, onClose, children, width, padding, zIndex }) => {
+  const backdropRef = useRef(null);
+
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape" && open) onClose && onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  // visualViewport API : sur iOS, quand l'utilisateur est zoomé, la position
+  // "fixed" CSS reste alignée sur le LAYOUT viewport (toute la page) au lieu
+  // de la zone VISIBLE. Résultat : le modal s'ouvre en-dehors de la vue, ou
+  // n'occupe qu'une fraction d'écran. On colle nous-mêmes le backdrop sur la
+  // zone visible réelle (offsetTop/Left + width/height du visualViewport).
+  useEffect(() => {
+    if (!open) return;
+    const vv = window.visualViewport;
+    const bd = backdropRef.current;
+    if (!vv || !bd) return;
+
+    const sync = () => {
+      bd.style.top = vv.offsetTop + "px";
+      bd.style.left = vv.offsetLeft + "px";
+      bd.style.right = "auto";
+      bd.style.bottom = "auto";
+      bd.style.width = vv.width + "px";
+      bd.style.height = vv.height + "px";
+    };
+    sync();
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    return () => {
+      vv.removeEventListener("resize", sync);
+      vv.removeEventListener("scroll", sync);
+      bd.style.top = ""; bd.style.left = ""; bd.style.right = ""; bd.style.bottom = "";
+      bd.style.width = ""; bd.style.height = "";
+    };
+  }, [open]);
+
   return (
-    <div className={"modal-backdrop" + (open ? " is-open" : "")} onClick={onClose} style={zIndex ? { zIndex } : undefined}>
+    <div ref={backdropRef} className={"modal-backdrop" + (open ? " is-open" : "")} onClick={onClose} style={zIndex ? { zIndex } : undefined}>
       <div className="modal" style={{ maxWidth: width || 920, padding: padding ?? 0 }} onClick={(e) => e.stopPropagation()}>
         <button className="modal__close" onClick={onClose} aria-label="Fermer">
           <I.Close size={16}/>
