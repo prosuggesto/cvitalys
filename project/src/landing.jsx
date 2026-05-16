@@ -58,6 +58,15 @@ const AnalyticsPreview = () => {
     { id: "channels", label: t("landing.analytics.tab2") },
     { id: "champions", label: t("landing.analytics.tab3") },
     { id: "audio", label: t("landing.analytics.tab4") },
+    { id: "interactions", label: t("landing.analytics.tab5") },
+  ];
+
+  // Mock interactions récentes
+  const interactions = [
+    { name: "Lucas M.", action: t("landing.analytics.inter.comment"), when: t("landing.analytics.inter.ago2h"), type: "feedback" },
+    { name: "Sophie R.", action: t("landing.analytics.inter.exchange"), when: t("landing.analytics.inter.ago5h"), type: "exchange" },
+    { name: "Marie L.", action: t("landing.analytics.inter.comment"), when: t("landing.analytics.inter.yesterday"), type: "feedback" },
+    { name: "Thomas D.", action: t("landing.analytics.inter.exchange"), when: t("landing.analytics.inter.days2"), type: "exchange" },
   ];
 
   const channels = [
@@ -71,6 +80,22 @@ const AnalyticsPreview = () => {
 
   return (
     <div className="card" style={{ padding: 24, background: "var(--surface)" }}>
+      {/* Barre de filtres mock — réplique de la vraie page Analytics */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap", alignItems: "center", padding: 12, background: "var(--surface-2)", border: "1px solid var(--border-soft)", borderRadius: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 13, color: "var(--ink-2)", fontWeight: 500 }}>
+          <I.Calendar size={13} stroke="var(--muted)"/> {t("landing.analytics.filter.period")}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 13, color: "var(--ink-2)", fontWeight: 500 }}>
+          <I.Grid size={13} stroke="var(--muted)"/> {t("landing.analytics.filter.sector")}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 13, color: "var(--ink-2)", fontWeight: 500 }}>
+          <I.Cv size={13} stroke="var(--muted)"/> {t("landing.analytics.filter.cv")}
+        </div>
+        <div style={{ marginLeft: "auto", padding: "8px 18px", background: "var(--ink)", color: "#F7F3EC", borderRadius: 999, fontSize: 13, fontWeight: 500 }}>
+          {t("landing.analytics.filter.btn")}
+        </div>
+      </div>
+
       {/* Onglets */}
       <div style={{ display: "flex", gap: 6, marginBottom: 22, flexWrap: "wrap", padding: 4, background: "var(--surface-2)", borderRadius: 999, width: "fit-content" }}>
         {tabs.map((tt) => (
@@ -161,6 +186,32 @@ const AnalyticsPreview = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {tab === "interactions" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {interactions.map((it, idx) => {
+            const isExchange = it.type === "exchange";
+            return (
+              <div key={idx} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", gap: 14, padding: "14px 0", borderTop: idx > 0 ? "1px solid var(--border-soft)" : "none" }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: "50%",
+                  background: isExchange ? "var(--ink)" : "var(--gold-soft)",
+                  color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
+                  display: "flex", alignItems: "center", justifyContent: "center"
+                }}>
+                  {isExchange ? <I.ThumbsUp size={16}/> : <I.Feedback size={16}/>}
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>
+                    {it.name} <span className="muted" style={{ fontWeight: 400 }}>{it.action}</span>
+                  </div>
+                </div>
+                <div className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{it.when}</div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
