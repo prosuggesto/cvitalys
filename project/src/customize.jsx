@@ -336,8 +336,8 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
                   value={local.langue || 'fr'}
                   onChange={(e) => update({ langue: e.target.value })}
                 >
-                  <option value="fr">🇫🇷 Français</option>
-                  <option value="es">🇪🇸 Español</option>
+                  <option value="fr">Français</option>
+                  <option value="es">Español</option>
                 </select>
               </Field>
             </div>

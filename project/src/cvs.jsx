@@ -341,8 +341,8 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
               value={f.langue}
               onChange={(e) => setF({ ...f, langue: e.target.value })}
             >
-              <option value="fr">🇫🇷 Français</option>
-              <option value="es">🇪🇸 Español</option>
+              <option value="fr">Français</option>
+              <option value="es">Español</option>
             </select>
           </Field>
           <Field label={t("cvs.modal.add.cvFile")} hint="JPEG — une seule page recto">
