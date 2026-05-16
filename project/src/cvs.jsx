@@ -106,46 +106,87 @@ const QRDownloadModal = ({ cv, open, onClose }) => {
   const url = cv.short_code ? `${base}#/cv/${cv.short_code}` : null;
 
   const triggerBlobDownload = (blob, filename) => {
+    console.log("[QR] triggerBlobDownload", { size: blob.size, type: blob.type, filename });
     const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.download = filename;
     link.href = blobUrl;
+    link.rel = "noopener";
+    link.style.display = "none";
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    setTimeout(() => {
+      try { document.body.removeChild(link); } catch (_) {}
+      URL.revokeObjectURL(blobUrl);
+    }, 200);
   };
 
-  const handleDownload = () => {
-    if (!url || !window.QRCode) return;
+  const handleDownload = async () => {
+    console.log("[QR] handleDownload click", { url, selected, hasQRCode: !!window.QRCode });
+    if (!url) { alert("URL du CV introuvable."); return; }
+    if (!window.QRCode) { alert("Librairie QR non chargée. Rechargez la page."); return; }
+
     const palette = QR_PALETTES.find((p) => p.key === selected) || QR_PALETTES[0];
     const filename = `QR_CVitalis_${(cv.name || "cv").replace(/\s+/g, "_")}.png`;
     setDownloading(true);
 
-    const canvas = document.createElement("canvas");
-    QRCode.toCanvas(canvas, url, {
-      width: 512,
-      margin: 3,
-      color: { dark: palette.dark, light: "#ffffff" },
-    }, (err) => {
-      setDownloading(false);
-      if (err) { alert("Erreur lors de la génération du QR."); return; }
+    try {
+      // 1) Génère QR en SVG vectoriel (qualité 4K garantie quel que soit le scale)
+      const svgString = await new Promise((resolve, reject) => {
+        QRCode.toString(url, {
+          type: "svg",
+          margin: 1,
+          errorCorrectionLevel: "H",
+          color: { dark: palette.dark, light: "#ffffff" },
+        }, (err, svg) => err ? reject(err) : resolve(svg));
+      });
+      console.log("[QR] SVG generated, length:", svgString.length);
 
-      // Rendre les pixels blancs transparents (fond transparent)
-      const out = document.createElement("canvas");
-      out.width = canvas.width;
-      out.height = canvas.height;
-      const ctx = out.getContext("2d");
-      ctx.drawImage(canvas, 0, 0);
-      const imgData = ctx.getImageData(0, 0, out.width, out.height);
+      // 2) Charge le SVG dans une <img>
+      const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      const img = await new Promise((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = (e) => reject(new Error("SVG load failed"));
+        i.src = svgUrl;
+      });
+      console.log("[QR] SVG image loaded");
+
+      // 3) Dessine sur un canvas 2048×2048 (4K) — laisse le fond transparent
+      const SIZE = 2048;
+      const canvas = document.createElement("canvas");
+      canvas.width = SIZE;
+      canvas.height = SIZE;
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = false; // pixels nets, pas d'anti-aliasing flou
+      ctx.clearRect(0, 0, SIZE, SIZE);    // fond transparent garanti
+      ctx.drawImage(img, 0, 0, SIZE, SIZE);
+      URL.revokeObjectURL(svgUrl);
+      console.log("[QR] Canvas drawn at 2048×2048");
+
+      // 4) Élimine tout pixel blanc résiduel → transparence parfaite
+      const imgData = ctx.getImageData(0, 0, SIZE, SIZE);
       const d = imgData.data;
       for (let i = 0; i < d.length; i += 4) {
         if (d[i] > 240 && d[i+1] > 240 && d[i+2] > 240) d[i+3] = 0;
       }
       ctx.putImageData(imgData, 0, 0);
 
-      out.toBlob((blob) => { triggerBlobDownload(blob, filename); }, "image/png");
-    });
+      // 5) Convertit en Blob PNG (préserve l'alpha)
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error("toBlob returned null")), "image/png");
+      });
+      console.log("[QR] PNG blob ready", blob.size, "bytes");
+
+      // 6) Trigger download
+      triggerBlobDownload(blob, filename);
+    } catch (e) {
+      console.error("[QR] Download error:", e);
+      alert("Erreur lors du téléchargement : " + (e.message || e));
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
