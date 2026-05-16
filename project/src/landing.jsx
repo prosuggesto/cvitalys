@@ -281,8 +281,31 @@ const LangSwitch = () => {
   );
 };
 
+// Hook : observe les .reveal et leur ajoute .is-visible au scroll
+const useReveal = () => {
+  useEffect(() => {
+    const els = document.querySelectorAll('.reveal');
+    if (!els.length) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      els.forEach((el) => el.classList.add('is-visible'));
+      return;
+    }
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add('is-visible');
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+};
+
 const Landing = ({ navigate }) => {
   const { t } = useT();
+  useReveal();
   return (
     <div data-no-chrome>
       <nav className="landing-nav">
@@ -302,97 +325,93 @@ const Landing = ({ navigate }) => {
       </nav>
 
       <section className="hero">
-        <div className="fade-in">
-          <span className="badge"><I.Sparkle size={12}/> {t("landing.hero.badge")}</span>
-          <h1>{t("landing.hero.title1")} <em>{t("landing.hero.title2")}</em></h1>
-          <p>{t("landing.hero.sub")}</p>
-          <div className="hero__cta">
+        <div>
+          <h1 className="reveal">{t("landing.hero.title1")} <em>{t("landing.hero.title2")}</em></h1>
+          <p className="reveal reveal--d2">{t("landing.hero.sub")}</p>
+          <div className="hero__cta reveal reveal--d3">
             <button className="btn btn--primary btn--lg" onClick={() => navigate("/auth/signup")}>{t("landing.hero.cta1")} <I.Arrow size={16}/></button>
             <button className="btn btn--secondary btn--lg" onClick={() => navigate("/cv/demo")}>{t("landing.hero.cta2")}</button>
           </div>
-          <div style={{ display: "flex", gap: 24, marginTop: 28, fontSize: 13, color: "var(--muted)" }}>
+          <div className="reveal reveal--d4" style={{ display: "flex", gap: 24, marginTop: 28, fontSize: 13, color: "var(--muted)" }}>
             <span className="row gap-8"><I.Check size={14} stroke="#6E8E78"/> {t("landing.hero.bullet1")}</span>
             <span className="row gap-8"><I.Check size={14} stroke="#6E8E78"/> {t("landing.hero.bullet2")}</span>
           </div>
         </div>
-        <div>
+        <div className="reveal reveal--d5">
           <HeroPreview/>
         </div>
       </section>
 
       <section id="fonctionnement" style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px" }}>
-        <div className="between" style={{ alignItems: "flex-end", flexWrap: "wrap", gap: 24, marginBottom: 48 }}>
-          <div>
-            <div className="eyebrow">{t("landing.how.eyebrow")}</div>
-            <h2 className="display" style={{ fontSize: 52, margin: "10px 0 0", fontWeight: 500 }}>{t("landing.how.title1")} <em className="display-italic">{t("landing.how.title2")}</em></h2>
-          </div>
-          <p className="muted" style={{ maxWidth: 360, margin: 0 }}>{t("landing.how.intro")}</p>
+        {/* Header : titre + intro en dessous */}
+        <div style={{ marginBottom: 56, maxWidth: 800 }}>
+          <div className="eyebrow reveal">{t("landing.how.eyebrow")}</div>
+          <h2 className="display reveal reveal--d1" style={{ fontSize: 52, margin: "10px 0 18px", fontWeight: 500, lineHeight: 1.1 }}>{t("landing.how.title1")} <em className="display-italic">{t("landing.how.title2")}</em></h2>
+          <p className="muted reveal reveal--d2" style={{ margin: 0, maxWidth: 560, fontSize: 16 }}>{t("landing.how.intro")}</p>
         </div>
 
         {/* Sous-section 1 : Préparation (2 étapes) */}
-        <div style={{ marginBottom: 56 }}>
-          <div className="row gap-12" style={{ marginBottom: 18, alignItems: "baseline" }}>
-            <span className="display-italic" style={{ fontSize: 22, color: "var(--gold-deep)" }}>i.</span>
-            <div className="eyebrow" style={{ color: "var(--gold-deep)" }}>{t("landing.how.prepEyebrow")}</div>
-            <h3 className="display" style={{ margin: 0, fontSize: 26, fontWeight: 500 }}>{t("landing.how.prepTitle")}</h3>
+        <div style={{ marginBottom: 64, paddingTop: 32, borderTop: "1px solid var(--border)" }}>
+          <div className="reveal" style={{ marginBottom: 24 }}>
+            <div className="eyebrow" style={{ color: "var(--gold-deep)", marginBottom: 6 }}>01 · {t("landing.how.prepEyebrow")}</div>
+            <h3 className="display" style={{ margin: 0, fontSize: 32, fontWeight: 500 }}>{t("landing.how.prepTitle")}</h3>
           </div>
           <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
-            <StepCard n="01" title={t("landing.how.s1t")} body={t("landing.how.s1b")}/>
-            <StepCard n="02" title={t("landing.how.s2t")} body={t("landing.how.s2b")}/>
+            <div className="reveal reveal--d1"><StepCard n="01" title={t("landing.how.s1t")} body={t("landing.how.s1b")}/></div>
+            <div className="reveal reveal--d2"><StepCard n="02" title={t("landing.how.s2t")} body={t("landing.how.s2b")}/></div>
           </div>
         </div>
 
         {/* Sous-section 2 : Partage (4 façons) */}
-        <div>
-          <div className="row gap-12" style={{ marginBottom: 18, alignItems: "baseline" }}>
-            <span className="display-italic" style={{ fontSize: 22, color: "var(--gold-deep)" }}>ii.</span>
-            <div className="eyebrow" style={{ color: "var(--gold-deep)" }}>{t("landing.how.shareEyebrow")}</div>
-            <h3 className="display" style={{ margin: 0, fontSize: 26, fontWeight: 500 }}>{t("landing.how.shareTitle")}</h3>
+        <div style={{ paddingTop: 32, borderTop: "1px solid var(--border)" }}>
+          <div className="reveal" style={{ marginBottom: 24 }}>
+            <div className="eyebrow" style={{ color: "var(--gold-deep)", marginBottom: 6 }}>02 · {t("landing.how.shareEyebrow")}</div>
+            <h3 className="display" style={{ margin: 0, fontSize: 32, fontWeight: 500 }}>{t("landing.how.shareTitle")}</h3>
           </div>
           <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-            <ShareCard icon="Cv"    title={t("landing.how.sh1t")} body={t("landing.how.sh1b")}/>
-            <ShareCard icon="Phone" title={t("landing.how.sh2t")} body={t("landing.how.sh2b")}/>
-            <ShareCard icon="Wifi"  title={t("landing.how.sh3t")} body={t("landing.how.sh3b")}/>
-            <ShareCard icon="Copy"  title={t("landing.how.sh4t")} body={t("landing.how.sh4b")}/>
+            <div className="reveal reveal--d1"><ShareCard icon="Cv"    title={t("landing.how.sh1t")} body={t("landing.how.sh1b")}/></div>
+            <div className="reveal reveal--d2"><ShareCard icon="Phone" title={t("landing.how.sh2t")} body={t("landing.how.sh2b")}/></div>
+            <div className="reveal reveal--d3"><ShareCard icon="Wifi"  title={t("landing.how.sh3t")} body={t("landing.how.sh3b")}/></div>
+            <div className="reveal reveal--d4"><ShareCard icon="Copy"  title={t("landing.how.sh4t")} body={t("landing.how.sh4b")}/></div>
           </div>
         </div>
       </section>
 
       <section id="valeur" style={{ background: "var(--surface)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px", display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 56, alignItems: "flex-start" }}>
-          <div style={{ position: "sticky", top: 100 }}>
+          <div className="reveal" style={{ position: "sticky", top: 100 }}>
             <div className="eyebrow">{t("landing.why.eyebrow")}</div>
             <h2 className="display" style={{ fontSize: 48, margin: "10px 0 18px", fontWeight: 500 }}>{t("landing.why.title1")} <em className="display-italic">{t("landing.why.title2")}</em> {t("landing.why.title3")}</h2>
             <p className="muted">{t("landing.why.intro")}</p>
           </div>
           <div>
-            <BenefitRow num="i." title={t("landing.why.r1t")} body={t("landing.why.r1b")}/>
-            <BenefitRow num="ii." title={t("landing.why.r2t")} body={t("landing.why.r2b")}/>
-            <BenefitRow num="iii." title={t("landing.why.r3t")} body={t("landing.why.r3b")}/>
-            <BenefitRow num="iv." title={t("landing.why.r4t")} body={t("landing.why.r4b")}/>
+            <div className="reveal reveal--d1"><BenefitRow num="i." title={t("landing.why.r1t")} body={t("landing.why.r1b")}/></div>
+            <div className="reveal reveal--d2"><BenefitRow num="ii." title={t("landing.why.r2t")} body={t("landing.why.r2b")}/></div>
+            <div className="reveal reveal--d3"><BenefitRow num="iii." title={t("landing.why.r3t")} body={t("landing.why.r3b")}/></div>
+            <div className="reveal reveal--d4"><BenefitRow num="iv." title={t("landing.why.r4t")} body={t("landing.why.r4b")}/></div>
           </div>
         </div>
       </section>
 
       <section id="analytics" style={{ maxWidth: 1280, margin: "0 auto", padding: "100px 32px 40px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: 56, alignItems: "center" }}>
-          <div>
+          <div className="reveal">
             <div className="eyebrow">{t("landing.analytics.eyebrow")}</div>
             <h2 className="display" style={{ fontSize: 48, margin: "10px 0 18px", fontWeight: 500 }}>{t("landing.analytics.title1")} <em className="display-italic">{t("landing.analytics.title2")}</em></h2>
             <p className="muted">{t("landing.analytics.intro")}</p>
           </div>
-          <AnalyticsPreview/>
+          <div className="reveal reveal--d2"><AnalyticsPreview/></div>
         </div>
         <style>{`@media (max-width: 900px) { #analytics > div { grid-template-columns: 1fr !important; gap: 32px !important; } }`}</style>
       </section>
 
       <section id="preview" style={{ maxWidth: 1280, margin: "0 auto", padding: "60px 32px 100px" }}>
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
+        <div className="reveal" style={{ textAlign: "center", marginBottom: 48 }}>
           <div className="eyebrow">{t("landing.preview.eyebrow")}</div>
           <h2 className="display" style={{ fontSize: 52, margin: "10px 0 14px", fontWeight: 500 }}>{t("landing.preview.title1")} <em className="display-italic">{t("landing.preview.title2")}</em> {t("landing.preview.title3")}</h2>
           <p className="muted" style={{ maxWidth: 540, margin: "0 auto" }}>{t("landing.preview.intro")}</p>
         </div>
-        <div style={{ display: "flex", justifyContent: "center" }}>
+        <div className="reveal reveal--d2" style={{ display: "flex", justifyContent: "center" }}>
           <div style={{ width: 380, transform: "rotate(-2deg)" }}>
             <PublicCVCard cv={MOCK.initialCvs[0]} user={MOCK.initialUser} compact/>
           </div>
