@@ -45,7 +45,11 @@ const CustomizeSelect = ({ cvs, navigate }) => {
         eyebrow={t("custom.select.eyebrow")}
         title={t("custom.select.title")}
         subtitle={t("custom.select.sub")} />
-    <div className="grid" style={{ gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(380px, 1fr))", gap: isMobile ? 16 : 20 }}>
+    <div className="grid" style={{
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, 400px)",
+      justifyContent: isMobile ? undefined : "start",
+      gap: isMobile ? 16 : 20
+    }}>
       {cvs.map((cv) =>
         <CustomizeSelectCard key={cv.id} cv={cv} onClick={() => navigate(`/app/customize/${cv.id}`)} />
       )}
