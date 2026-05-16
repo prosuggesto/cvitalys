@@ -88,11 +88,45 @@ const Modal = ({ open, onClose, children, width, padding, zIndex }) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // visualViewport API : sur iOS, quand l'utilisateur est zoomé, la position
-  // "fixed" CSS reste alignée sur le LAYOUT viewport (toute la page) au lieu
-  // de la zone VISIBLE. Résultat : le modal s'ouvre en-dehors de la vue, ou
-  // n'occupe qu'une fraction d'écran. On colle nous-mêmes le backdrop sur la
-  // zone visible réelle (offsetTop/Left + width/height du visualViewport).
+  // Quand le modal s'ouvre :
+  //  1. Force iOS à reset le zoom à 1× et le verrouille pendant l'ouverture
+  //     (sinon : le modal s'affiche cassé si la page était zoomée)
+  //  2. Verrouille le scroll du body — pattern iOS : position:fixed + top:-scrollY
+  //     (sinon : scroller dans le modal scrolle la page derrière)
+  // À la fermeture : on restaure tout + on remet la scroll position.
+  useEffect(() => {
+    if (!open) return;
+
+    // 1) Lock zoom + force reset à 1×
+    const meta = document.querySelector('meta[name="viewport"]');
+    const originalViewport = meta ? meta.getAttribute("content") : "width=device-width, initial-scale=1";
+    if (meta) meta.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover");
+
+    // 2) Lock body scroll
+    const scrollY = window.scrollY;
+    const prevBody = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      width: document.body.style.width,
+    };
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = "-" + scrollY + "px";
+    document.body.style.width = "100%";
+
+    return () => {
+      if (meta) meta.setAttribute("content", originalViewport);
+      document.body.style.overflow = prevBody.overflow;
+      document.body.style.position = prevBody.position;
+      document.body.style.top = prevBody.top;
+      document.body.style.width = prevBody.width;
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
+
+  // visualViewport API : si le clavier iOS apparaît dans le modal, on garde
+  // le backdrop aligné sur la zone visible (pas en-dessous du clavier).
   useEffect(() => {
     if (!open) return;
     const vv = window.visualViewport;
