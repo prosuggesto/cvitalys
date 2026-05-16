@@ -22,11 +22,16 @@ const CustomizeSelectCard = ({ cv, onClick }) => {
       </div>
       <span className="badge">{cv.role}</span>
     </div>
-    <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "6px 0 10px" : "8px 0 14px" }}>
-      {cv.cv_url
-        ? <ImagePreview url={cv.cv_url} width={isMobile ? 200 : 260} float3d={true}/>
-        : <CVPreviewVisual cv={cv} scale={isMobile ? 0.8 : 1.1} float3d={true}/>}
-    </div>
+    {cv.cv_url ? (
+      <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "6px 0 10px" : "8px 0 14px" }}>
+        <ImagePreview url={cv.cv_url} width={isMobile ? 200 : 260} float3d={true}/>
+      </div>
+    ) : (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: "24px 0", border: "1px dashed var(--border-strong)", borderRadius: 12, color: "var(--muted)" }}>
+        <I.Cv size={24} stroke="var(--subtle)"/>
+        <div style={{ fontSize: 13 }}>Aucun CV importé</div>
+      </div>
+    )}
     <div className="between" style={{ flexWrap: "wrap", gap: 8 }}>
       <span className="muted" style={{ fontSize: 13 }}>{t("custom.select.click")}</span>
       <span className="row gap-8" style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>
@@ -276,9 +281,9 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
                 </div>
               </React.Fragment>
             ) : (
-              <div className="card-empty" style={{ padding: 56, textAlign: "center", aspectRatio: "1/1.414", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
-                <I.Cv size={36} stroke="var(--subtle)" />
-                <div className="muted">{t("custom.cvNoneText")}</div>
+              <div className="card-empty" style={{ padding: "32px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
+                <I.Cv size={32} stroke="var(--subtle)" />
+                <div className="muted" style={{ fontSize: 14 }}>{t("custom.cvNoneText")}</div>
                 <button className="btn btn--primary btn--sm" onClick={() => fileInputRef.current.click()}>
                   <I.Upload size={14} /> Importer mon CV (JPEG)
                 </button>
@@ -420,11 +425,15 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
           <p className="muted" style={{ margin: "0 0 18px", fontSize: 13 }}>
             <kbd style={{ padding: '2px 6px', background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11 }}>Ctrl</kbd> + molette pour zoomer · cliquer-glisser pour déplacer · double-clic pour réinitialiser
           </p>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            {displayImageUrl
-              ? <ZoomableImage src={displayImageUrl}/>
-              : <CVPreviewVisual cv={local} scale={2.1} />
-            }
+          <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+            {displayImageUrl ? (
+              <ZoomableImage src={displayImageUrl}/>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, color: "var(--muted)" }}>
+                <I.Cv size={40} stroke="var(--subtle)"/>
+                <div style={{ fontSize: 14 }}>Aucun CV importé pour ce profil</div>
+              </div>
+            )}
           </div>
         </div>
       </Modal>

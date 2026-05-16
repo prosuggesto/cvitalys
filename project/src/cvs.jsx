@@ -24,11 +24,16 @@ const CVCard = ({ cv, onPresent, onCustomize, onPreview, onDelete, onDownloadQR 
         <button className="icon-btn icon-btn--danger" onClick={onDelete} title={t("common.delete")} style={{ color: "var(--red)" }}><I.X size={iconSize}/></button>
       </div>
     </div>
-    <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "8px 0 14px" : "12px 0 18px" }}>
-      {cv.cv_url
-        ? <ImagePreview url={cv.cv_url} width={imgWidth} float3d={true}/>
-        : <CVPreviewVisual cv={cv} scale={isMobile ? 0.75 : 1} float3d={true}/>}
-    </div>
+    {cv.cv_url ? (
+      <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "8px 0 14px" : "12px 0 18px" }}>
+        <ImagePreview url={cv.cv_url} width={imgWidth} float3d={true}/>
+      </div>
+    ) : (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: "24px 0", border: "1px dashed var(--border-strong)", borderRadius: 12, color: "var(--muted)" }}>
+        <I.Cv size={28} stroke="var(--subtle)"/>
+        <div style={{ fontSize: 13 }}>Aucun CV importé</div>
+      </div>
+    )}
     <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }}>
       <button className="btn btn--primary" onClick={onPresent}>
         <I.QR size={iconSize}/> {t("cvs.present")}
@@ -88,9 +93,11 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
 
   const content = (
     <>
-      <div style={{ padding: isMobile ? "60px 20px 24px" : 48, background: "var(--bg-soft)", borderRadius: isMobile ? 0 : "22px 0 0 22px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {cv.cv_url ? <ImagePreview url={cv.cv_url} width={isMobile ? 220 : 300} float3d={true}/> : <CVPreviewVisual cv={cv} scale={isMobile ? 0.8 : 1.05}/>}
-      </div>
+      {cv.cv_url && (
+        <div style={{ padding: isMobile ? "60px 20px 24px" : 48, background: "var(--bg-soft)", borderRadius: isMobile ? 0 : "22px 0 0 22px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <ImagePreview url={cv.cv_url} width={isMobile ? 220 : 300} float3d={true}/>
+        </div>
+      )}
       <div style={{ padding: isMobile ? "28px 24px 40px" : "56px 48px 48px" }}>
         <div className="eyebrow">{t("cvs.modal.present.eyebrow")}</div>
         <h2 className="display" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 500, margin: "10px 0 14px", fontStyle: "italic" }}>{cv.name}</h2>
@@ -115,8 +122,8 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
     );
   }
   return (
-    <Modal open={open} onClose={onClose} width={920}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>{content}</div>
+    <Modal open={open} onClose={onClose} width={cv.cv_url ? 920 : 560}>
+      <div style={{ display: "grid", gridTemplateColumns: cv.cv_url ? "1fr 1fr" : "1fr", gap: 0 }}>{content}</div>
     </Modal>
   );
 };

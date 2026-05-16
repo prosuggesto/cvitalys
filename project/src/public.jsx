@@ -223,12 +223,11 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
           <Brand size={14} />
           <span className="badge badge--green badge--dot">{t("public.scanned")}</span>
         </div>
-        <div style={{ position: "relative", display: "flex", justifyContent: "center", padding: "8px 0" }}>
-          {cv.cv_url
-            ? <ImagePreview url={cv.cv_url} width={260} float3d={true}/>
-            : <CVPreviewVisual cv={cv} scale={1.15} float3d={true} />
-          }
-        </div>
+        {cv.cv_url && (
+          <div style={{ position: "relative", display: "flex", justifyContent: "center", padding: "8px 0" }}>
+            <ImagePreview url={cv.cv_url} width={260} float3d={true}/>
+          </div>
+        )}
         <div style={{ marginTop: 14, textAlign: "center" }}>
           <h2 className="display" style={{ fontSize: 22, fontWeight: 500, margin: 0 }}>{user.firstName} {user.lastName}</h2>
           <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{cv.role} · {cv.sector}</div>
@@ -240,16 +239,15 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
   // Full public page : CV flottant + bouton "Voir le CV" en dessous + carte d'infos
   return (
     <React.Fragment>
-      {/* CV flottant (le header est rendu en pleine largeur par PublicPage) */}
-      <div style={{ margin: '4px 0 16px', display: 'flex', justifyContent: 'center' }}>
-        {cv.cv_url
-          ? <ImagePreview url={cv.cv_url} width={300} float3d={true}/>
-          : <CVPreviewVisual cv={cv} scale={1.35} float3d={true} />
-        }
-      </div>
+      {/* CV flottant — uniquement si un fichier a été uploadé */}
+      {cv.cv_url && (
+        <div style={{ margin: '4px 0 16px', display: 'flex', justifyContent: 'center' }}>
+          <ImagePreview url={cv.cv_url} width={300} float3d={true}/>
+        </div>
+      )}
 
-      {/* Bouton "Voir le CV" SOUS l'image (ne cache plus le contenu) */}
-      {onViewCv && (
+      {/* Bouton "Voir le CV" SOUS l'image — uniquement si CV uploadé */}
+      {onViewCv && cv.cv_url && (
         <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
           <button className="btn btn--secondary btn--sm" onClick={onViewCv}>
             <I.Eye size={14} /> {t("public.viewCv")}
@@ -466,11 +464,15 @@ const PublicPage = ({ shortCode, navigate }) => {
           <p className="muted" style={{ margin: "0 0 18px", fontSize: 13 }}>
             <kbd style={{ padding: '2px 6px', background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11 }}>Ctrl</kbd> + molette pour zoomer · cliquer-glisser pour déplacer · double-clic pour réinitialiser
           </p>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            {cv.cv_url
-              ? <ZoomableImage src={cv.cv_url}/>
-              : <CVPreviewVisual cv={cv} scale={2.1} />
-            }
+          <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+            {cv.cv_url ? (
+              <ZoomableImage src={cv.cv_url}/>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, color: "var(--muted)" }}>
+                <I.Cv size={40} stroke="var(--subtle)"/>
+                <div style={{ fontSize: 14 }}>Aucun CV disponible</div>
+              </div>
+            )}
           </div>
         </div>
       </Modal>
