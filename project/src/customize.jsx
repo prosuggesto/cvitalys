@@ -157,6 +157,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
         afficher_bouton_linkedin: local.buttons.linkedin,
         afficher_bouton_instagram: local.buttons.instagram,
         afficher_bouton_site_web: local.buttons.website,
+        langue: local.langue === 'es' ? 'es' : 'fr',
       };
 
       // Résoudre poste / secteur
@@ -327,6 +328,16 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
                   <option value="warm">{t("custom.accent.warm")}</option>
                   <option value="sage">{t("custom.accent.sage")}</option>
                   <option value="ink">{t("custom.accent.ink")}</option>
+                </select>
+              </Field>
+              <Field label="Langue de la page publique" hint="Langue affichée aux recruteurs qui scannent ce CV">
+                <select
+                  className="select"
+                  value={local.langue || 'fr'}
+                  onChange={(e) => update({ langue: e.target.value })}
+                >
+                  <option value="fr">🇫🇷 Français</option>
+                  <option value="es">🇪🇸 Español</option>
                 </select>
               </Field>
             </div>

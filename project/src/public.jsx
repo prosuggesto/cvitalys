@@ -368,9 +368,12 @@ const PublicPage = ({ shortCode, navigate }) => {
         setLoading(false);
         if (data) {
           api.incrementStat(shortCode, 'scan');
-          // Langue de la page = langue choisie par le créateur du CV dans son profil
+          // Langue de la page = langue du CV (champ dédié), fallback profil, sinon fr
+          const cvLang = data.cv?.langue;
           const profilLang = data.profil?.langue_interface;
-          setLang(profilLang === 'es' ? 'es' : 'fr');
+          const finalLang = (cvLang === 'es' || cvLang === 'fr') ? cvLang
+                          : (profilLang === 'es' ? 'es' : 'fr');
+          setLang(finalLang);
         }
       })
       .catch(() => setLoading(false));

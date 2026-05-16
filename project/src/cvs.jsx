@@ -241,7 +241,7 @@ const QRDownloadModal = ({ cv, open, onClose, onError }) => {
 
 const AddCVModal = ({ open, onClose, onCreate, session }) => {
   const { t } = useT();
-  const [f, setF] = useState({ name: "", role: { id: null, nom: "" }, sector: { id: null, nom: "" }, file: null, audioBlob: null });
+  const [f, setF] = useState({ name: "", role: { id: null, nom: "" }, sector: { id: null, nom: "" }, file: null, audioBlob: null, langue: "fr" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [postes, setPostes] = useState([]);
@@ -249,7 +249,7 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
 
   useEffect(() => {
     if (open) {
-      setF({ name: "", role: { id: null, nom: "" }, sector: { id: null, nom: "" }, file: null, audioBlob: null });
+      setF({ name: "", role: { id: null, nom: "" }, sector: { id: null, nom: "" }, file: null, audioBlob: null, langue: "fr" });
       setError("");
       if (session) {
         api.getPostes(session.user.id).then(setPostes).catch(() => {});
@@ -290,7 +290,7 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
       : f.sector.nom.trim() ? api.getOrCreateSecteur(userId, f.sector.nom) : Promise.resolve(null);
 
     Promise.all([resolvePoste, resolveSecteur])
-      .then(([posteId, secteurId]) => api.createCv(userId, { nom_cv: f.name, poste_id: posteId, secteur_id: secteurId }))
+      .then(([posteId, secteurId]) => api.createCv(userId, { nom_cv: f.name, poste_id: posteId, secteur_id: secteurId, langue: f.langue }))
       .then((newCv) => {
         const final = { ...newCv };
         const uploads = [];
@@ -335,6 +335,16 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
               placeholder="Hôtellerie"
             />
           </div>
+          <Field label="Langue de la page publique" hint="Langue affichée aux recruteurs qui scannent ce CV">
+            <select
+              className="select"
+              value={f.langue}
+              onChange={(e) => setF({ ...f, langue: e.target.value })}
+            >
+              <option value="fr">🇫🇷 Français</option>
+              <option value="es">🇪🇸 Español</option>
+            </select>
+          </Field>
           <Field label={t("cvs.modal.add.cvFile")} hint="JPEG — une seule page recto">
             <label className="card-empty" style={{ padding: 18, display: "flex", alignItems: "center", gap: 10, cursor: "pointer", justifyContent: "center" }}>
               <I.Upload size={18} stroke="var(--muted)"/>

@@ -61,6 +61,7 @@ function normalizeCv(row) {
     },
     est_public: row.est_public,
     utilisateur_id: row.utilisateur_id,
+    langue: row.langue_cv || 'fr',  // langue d'affichage de la page publique du CV
   };
 }
 
@@ -150,6 +151,7 @@ const api = {
       nom_cv: data.nom_cv || 'Nouveau CV',
       poste_id: data.poste_id || null,
       secteur_id: data.secteur_id || null,
+      langue_cv: data.langue === 'es' ? 'es' : 'fr',  // défaut fr, sinon es (whitelist)
       est_public: true,
     };
     return sb
@@ -187,6 +189,7 @@ const api = {
       afficher_bouton_instagram: 'afficher_bouton_instagram',
       afficher_bouton_site_web: 'afficher_bouton_site_web',
       est_public: 'est_public',
+      langue: 'langue_cv',  // côté frontend on appelle "langue", côté DB c'est "langue_cv"
     };
     Object.keys(updates).forEach((k) => {
       if (keyMap[k]) dbUpdates[keyMap[k]] = updates[k];
