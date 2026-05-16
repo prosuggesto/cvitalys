@@ -105,46 +105,46 @@ const QRDownloadModal = ({ cv, open, onClose }) => {
   const base = window.APP_URL || (window.location.origin + window.location.pathname);
   const url = cv.short_code ? `${base}#/cv/${cv.short_code}` : null;
 
-  const triggerDownload = (dataUrl, filename) => {
+  const triggerBlobDownload = (blob, filename) => {
+    const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.download = filename;
-    link.href = dataUrl;
+    link.href = blobUrl;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
   };
 
   const handleDownload = () => {
-    if (!url) return;
+    if (!url || !window.QRCode) return;
     const palette = QR_PALETTES.find((p) => p.key === selected) || QR_PALETTES[0];
-    const filename = `QR_CVitalis_${(cv.name || "cv").replace(/\s+/g, "_")}.jpeg`;
+    const filename = `QR_CVitalis_${(cv.name || "cv").replace(/\s+/g, "_")}.png`;
     setDownloading(true);
-
-    if (!window.QRCode) {
-      // Fallback API
-      const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(url)}&margin=3&color=${palette.dark.replace("#","")}&bgcolor=${palette.light.replace("#","")}`;
-      triggerDownload(apiUrl, filename);
-      setDownloading(false);
-      return;
-    }
 
     const canvas = document.createElement("canvas");
     QRCode.toCanvas(canvas, url, {
       width: 512,
       margin: 3,
-      color: { dark: palette.dark, light: palette.light },
+      color: { dark: palette.dark, light: "#ffffff" },
     }, (err) => {
       setDownloading(false);
       if (err) { alert("Erreur lors de la génération du QR."); return; }
-      // Dessiner fond coloré (nécessaire pour JPEG sans transparence)
+
+      // Rendre les pixels blancs transparents (fond transparent)
       const out = document.createElement("canvas");
       out.width = canvas.width;
       out.height = canvas.height;
       const ctx = out.getContext("2d");
-      ctx.fillStyle = palette.light;
-      ctx.fillRect(0, 0, out.width, out.height);
       ctx.drawImage(canvas, 0, 0);
-      triggerDownload(out.toDataURL("image/jpeg", 0.95), filename);
+      const imgData = ctx.getImageData(0, 0, out.width, out.height);
+      const d = imgData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] > 240 && d[i+1] > 240 && d[i+2] > 240) d[i+3] = 0;
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+      out.toBlob((blob) => { triggerBlobDownload(blob, filename); }, "image/png");
     });
   };
 
