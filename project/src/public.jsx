@@ -1,5 +1,32 @@
 // Page publique CV (vue recruteur après scan) + tracking stats + NFC redirect
 
+// Helpers de sécurité — empêchent les attaques XSS via javascript:/data:/vbscript:
+// dans les champs "URL" que l'utilisateur saisit (linkedin, instagram, site web).
+// Toute URL non http(s) est rejetée. Si pas de scheme, on préfixe https://.
+const safeExternalUrl = (raw) => {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (!s) return null;
+  // Si l'utilisateur a tapé "monsite.com" sans scheme, on ajoute https://
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(s) ? s : `https://${s}`;
+  try {
+    const u = new URL(withScheme);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return u.toString();
+  } catch (_) {
+    return null;
+  }
+};
+// Sanitise une adresse email pour usage dans un mailto: (anti-header-injection).
+// Refuse tout caractère hors RFC simplifiée ; null si invalide.
+const safeMailtoTarget = (raw) => {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  // Pattern strict : pas de \r, \n, espace, virgule, etc.
+  if (!/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(s)) return null;
+  return s;
+};
+
 const SecondaryContactBtn = ({ icon, brand, label, onClick }) => {
   const Ico = icon ? I[icon] : null;
   return (
@@ -23,7 +50,9 @@ const ExchangeModal = ({ open, onClose, cv, user, toast }) => {
     const body = encodeURIComponent(isEs
       ? `Hola ${user.firstName},\n\nHemos consultado tu CV digital y nos gustaría hablar contigo.\n\nEmpresa: ${f.company || "—"}\nReclutador: ${f.recruiter || "—"}\nFecha y hora deseadas: ${dateLabel}\nComentario: ${f.note || "—"}\n\nAtentamente.`
       : `Bonjour ${user.firstName},\n\nNous avons consulté votre CV digital et souhaitons échanger avec vous.\n\nEntreprise : ${f.company || "—"}\nRecruteur : ${f.recruiter || "—"}\nDate et heure souhaitées : ${dateLabel}\nCommentaire : ${f.note || "—"}\n\nCordialement.`);
-    window.location.href = `mailto:${user.email}?subject=${subject}&body=${body}`;
+    const safeEmail = safeMailtoTarget(user.email);
+    if (!safeEmail) { toast("Adresse email invalide."); return; }
+    window.location.href = `mailto:${encodeURIComponent(safeEmail)}?subject=${subject}&body=${body}`;
     toast(t("public.mailOpened"));
     onClose();
   };
@@ -62,7 +91,9 @@ const FeedbackModal = ({ open, onClose, cv, user, toast }) => {
     const body = encodeURIComponent(isEs
       ? `Hola ${user.firstName},\n\nHemos consultado tu CV digital y queremos dejarte un comentario.\n\nEmpresa: ${f.company || "—"}\nReclutador: ${f.recruiter || "—"}\nComentario: ${f.note || "—"}\n\nAtentamente.`
       : `Bonjour ${user.firstName},\n\nNous avons consulté votre CV digital et souhaitons vous faire un retour.\n\nEntreprise : ${f.company || "—"}\nRecruteur : ${f.recruiter || "—"}\nCommentaire : ${f.note || "—"}\n\nCordialement.`);
-    window.location.href = `mailto:${user.email}?subject=${subject}&body=${body}`;
+    const safeEmail = safeMailtoTarget(user.email);
+    if (!safeEmail) { toast("Adresse email invalide."); return; }
+    window.location.href = `mailto:${encodeURIComponent(safeEmail)}?subject=${subject}&body=${body}`;
     toast(t("public.mailOpened"));
     onClose();
   };
@@ -295,11 +326,31 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
           <div style={{ marginTop: 18 }}>
             <div className="eyebrow" style={{ textAlign: "center", marginBottom: 12 }}>{t("public.otherChannels")}</div>
             <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-              {cv.buttons.whatsapp && <SecondaryContactBtn brand="whatsapp" label="WhatsApp" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_whatsapp'); const wa = (cv.contact.whatsapp || user.phone || '').replace(/\D/g, ''); window.location.href = `https://wa.me/${wa}`; }} />}
-              {cv.buttons.email && <SecondaryContactBtn brand="gmail" label="Email" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_email'); window.location.href = `mailto:${cv.contact.email || user.email}`; }} />}
-              {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_linkedin'); const url = cv.contact.linkedin; if (url) window.location.href = url; }} />}
-              {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_instagram'); const url = cv.contact.instagram; if (url) window.location.href = url; }} />}
-              {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" onClick={() => { if (shortCode) api.incrementStat(shortCode, 'clic_site_web'); const url = cv.contact.website; if (url) window.location.href = url; }} />}
+              {cv.buttons.whatsapp && <SecondaryContactBtn brand="whatsapp" label="WhatsApp" onClick={() => {
+                if (shortCode) api.incrementStat(shortCode, 'clic_whatsapp');
+                const wa = (cv.contact.whatsapp || user.phone || '').replace(/\D/g, '');
+                if (wa) window.location.href = `https://wa.me/${wa}`;
+              }} />}
+              {cv.buttons.email && <SecondaryContactBtn brand="gmail" label="Email" onClick={() => {
+                if (shortCode) api.incrementStat(shortCode, 'clic_email');
+                const safe = safeMailtoTarget(cv.contact.email || user.email);
+                if (safe) window.location.href = `mailto:${encodeURIComponent(safe)}`;
+              }} />}
+              {cv.buttons.linkedin && <SecondaryContactBtn brand="linkedin" label="LinkedIn" onClick={() => {
+                if (shortCode) api.incrementStat(shortCode, 'clic_linkedin');
+                const safe = safeExternalUrl(cv.contact.linkedin);
+                if (safe) window.open(safe, '_blank', 'noopener,noreferrer');
+              }} />}
+              {cv.buttons.instagram && <SecondaryContactBtn brand="instagram" label="Instagram" onClick={() => {
+                if (shortCode) api.incrementStat(shortCode, 'clic_instagram');
+                const safe = safeExternalUrl(cv.contact.instagram);
+                if (safe) window.open(safe, '_blank', 'noopener,noreferrer');
+              }} />}
+              {cv.buttons.website && <SecondaryContactBtn icon="Globe" label="Site web" onClick={() => {
+                if (shortCode) api.incrementStat(shortCode, 'clic_site_web');
+                const safe = safeExternalUrl(cv.contact.website);
+                if (safe) window.open(safe, '_blank', 'noopener,noreferrer');
+              }} />}
             </div>
           </div>
         }

@@ -90,7 +90,7 @@ const NFCPage = ({ cvs, session, toast }) => {
               <button className="btn btn--primary" onClick={() => { navigator.clipboard?.writeText(link); toast(t("common.copied")); }}>
                 <I.Copy size={14}/> {t("nfc.copyBtn")}
               </button>
-              <button className="btn btn--secondary" onClick={() => { if (link) window.open(link, '_blank'); }}>
+              <button className="btn btn--secondary" onClick={() => { if (link && /^https?:\/\//i.test(link)) window.open(link, '_blank', 'noopener,noreferrer'); }}>
                 <I.Open size={14}/> {t("nfc.openBtn")}
               </button>
             </div>

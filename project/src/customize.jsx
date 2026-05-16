@@ -225,7 +225,12 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
                   <button className="btn btn--secondary btn--sm" onClick={() => fileInputRef.current.click()}>
                     <I.Upload size={14} /> {t("common.replace")}
                   </button>
-                  <button className="btn btn--ghost btn--sm" onClick={() => window.open(displayImageUrl, '_blank')}>
+                  <button className="btn btn--ghost btn--sm" onClick={() => {
+                    // Sécurité : refuse les schemes non http(s) (anti javascript:/data:)
+                    if (typeof displayImageUrl === 'string' && /^https?:\/\//i.test(displayImageUrl)) {
+                      window.open(displayImageUrl, '_blank', 'noopener,noreferrer');
+                    }
+                  }}>
                     <I.Eye size={14} /> {t("common.fullscreen")}
                   </button>
                   <input type="file" accept="image/jpeg,image/png,image/webp" ref={fileInputRef} hidden onChange={(e) => {
