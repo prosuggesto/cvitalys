@@ -1,6 +1,6 @@
 // Mes CV page + Présenter modal + Ajouter modal — connecté à Supabase
 
-const CVCard = ({ cv, onPresent, onCustomize, onPreview, onDelete }) => {
+const CVCard = ({ cv, onPresent, onCustomize, onPreview, onDelete, onDownloadQR }) => {
   const { t } = useT();
   return (
   <div className="card" style={{ padding: 22, display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
@@ -23,9 +23,14 @@ const CVCard = ({ cv, onPresent, onCustomize, onPreview, onDelete }) => {
         ? <ImagePreview url={cv.cv_url} width={300} float3d={true}/>
         : <CVPreviewVisual cv={cv} scale={1} float3d={true}/>}
     </div>
-    <button className="btn btn--primary btn--block" onClick={onPresent}>
-      <I.QR size={16}/> {t("cvs.present")}
-    </button>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }}>
+      <button className="btn btn--primary" onClick={onPresent}>
+        <I.QR size={16}/> {t("cvs.present")}
+      </button>
+      <button className="btn btn--secondary" onClick={onDownloadQR} title="Télécharger QR" style={{ padding: "0 16px" }}>
+        <I.Download size={16}/>
+      </button>
+    </div>
   </div>
   );
 };
@@ -73,15 +78,88 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
           <div style={{ padding: 18, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18, display: "flex", justifyContent: "center" }}>
             <QRBlock size={180} url={publicUrl} cachedSrc={qrSrc}/>
           </div>
-          {publicUrl && (
-            <div style={{ marginTop: 14, fontSize: 12, color: "var(--muted)", textAlign: "center", fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>{publicUrl}</div>
-          )}
           <button className="btn btn--primary btn--block btn--lg" style={{ marginTop: 20 }} onClick={handleCopy}>
             <I.Share size={16}/> {t("common.share")}
           </button>
         </div>
       </div>
       <style>{`@media (max-width: 760px) { .modal > div { grid-template-columns: 1fr !important; } .modal > div > div:first-child { border-radius: 22px 22px 0 0 !important; padding: 32px !important; } }`}</style>
+    </Modal>
+  );
+};
+
+const QR_PALETTES = [
+  { key: "classic",  label: "Classique",   dark: "#1B1814", light: "#FFFFFF", preview: ["#1B1814", "#FFFFFF"] },
+  { key: "gold",     label: "Doré",        dark: "#B69768", light: "#1B1814", preview: ["#B69768", "#1B1814"] },
+  { key: "red",      label: "Rouge",       dark: "#DC2626", light: "#FFFFFF", preview: ["#DC2626", "#FFFFFF"] },
+  { key: "blue",     label: "Bleu",        dark: "#1D4ED8", light: "#FFFFFF", preview: ["#1D4ED8", "#FFFFFF"] },
+  { key: "green",    label: "Vert",        dark: "#15803D", light: "#FFFFFF", preview: ["#15803D", "#FFFFFF"] },
+];
+
+const QRDownloadModal = ({ cv, open, onClose }) => {
+  const { t } = useT();
+  const [selected, setSelected] = useState("classic");
+  const [downloading, setDownloading] = useState(false);
+
+  if (!cv) return null;
+  const base = window.APP_URL || (window.location.origin + window.location.pathname);
+  const url = cv.short_code ? `${base}#/cv/${cv.short_code}` : null;
+
+  const handleDownload = () => {
+    if (!url || !window.QRCode) return;
+    const palette = QR_PALETTES.find((p) => p.key === selected) || QR_PALETTES[0];
+    setDownloading(true);
+    const canvas = document.createElement("canvas");
+    QRCode.toCanvas(canvas, url, {
+      width: 512,
+      margin: 3,
+      color: { dark: palette.dark, light: palette.light },
+    }, (err) => {
+      setDownloading(false);
+      if (err) { alert("Erreur lors de la génération du QR."); return; }
+      const link = document.createElement("a");
+      link.download = `QR_CVitalis_${(cv.name || "cv").replace(/\s+/g, "_")}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} width={440}>
+      <div style={{ padding: 40 }}>
+        <div className="eyebrow">QR Code</div>
+        <h2 className="display" style={{ fontSize: 28, margin: "8px 0 6px", fontWeight: 500 }}>Télécharger le QR</h2>
+        <p className="muted" style={{ marginBottom: 24, fontSize: 14 }}>Choisissez un style de couleur pour votre QR code.</p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 28 }}>
+          {QR_PALETTES.map((pal) => (
+            <button
+              key={pal.key}
+              onClick={() => setSelected(pal.key)}
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                padding: "12px 6px", borderRadius: 12, cursor: "pointer", border: "none",
+                background: selected === pal.key ? "var(--surface-2)" : "transparent",
+                outline: selected === pal.key ? "2px solid var(--ink)" : "2px solid transparent",
+                transition: "all 0.15s",
+              }}
+            >
+              <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", flexShrink: 0, border: "1px solid var(--border-soft)" }}>
+                <div style={{ width: "100%", height: "50%", background: pal.preview[0] }}/>
+                <div style={{ width: "100%", height: "50%", background: pal.preview[1] }}/>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 500, color: "var(--ink-2)", textAlign: "center", lineHeight: 1.2 }}>{pal.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn btn--secondary" onClick={onClose} style={{ flex: 1 }} disabled={downloading}>Annuler</button>
+          <button className="btn btn--primary" onClick={handleDownload} style={{ flex: 2 }} disabled={downloading || !url}>
+            <I.Download size={15}/> {downloading ? "Génération…" : "Télécharger"}
+          </button>
+        </div>
+      </div>
     </Modal>
   );
 };
@@ -213,6 +291,7 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
 const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
   const { t } = useT();
   const [presentCv, setPresentCv] = useState(null);
+  const [downloadCv, setDownloadCv] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [deleting, setDeleting] = useState(null);
 
@@ -264,6 +343,7 @@ const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
             onCustomize={() => navigate(`/app/customize/${cv.id}`)}
             onPreview={() => navigate(`/cv/${cv.short_code || cv.id}`)}
             onDelete={() => handleDelete(cv)}
+            onDownloadQR={() => setDownloadCv(cv)}
           />
         ))}
         <EmptyCVCard onClick={() => setAddOpen(true)}/>
@@ -286,6 +366,11 @@ const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
           // Redirige directement vers Personnalisation avec CV + audio déjà chargés
           navigate(`/app/customize/${newCv.id}`);
         }}
+      />
+      <QRDownloadModal
+        cv={downloadCv}
+        open={!!downloadCv}
+        onClose={() => setDownloadCv(null)}
       />
     </div>
   );
