@@ -152,75 +152,46 @@ const QRDownloadModal = ({ cv, open, onClose, onError }) => {
 
   const handleDownload = async () => {
     if (!url) { reportError("Lien du CV indisponible."); return; }
-    // Garde-fou DoS : URL trop longue pourrait faire planter QRCode
     if (url.length > 512) { reportError("Lien du CV invalide."); return; }
 
     const palette = QR_PALETTES.find((p) => p.key === selected) || QR_PALETTES[0];
-    const safeName = sanitizeFilename(cv.name);
-    const filename = `QR_CVitalis_${safeName}.png`;
+    const filename = `QR_CVitalis_${sanitizeFilename(cv.name)}.png`;
     setDownloading(true);
 
     try {
-      // Charge dynamiquement la lib QRCode si pas encore disponible
-      // (essaie local + 3 CDN fallbacks). Indispensable si Edge Tracking Prevention
-      // bloque le script tag initial ou si le déploiement n'est pas à jour.
+      // Assure que la lib locale est chargée
       const ok = await ensureQRCode(5000);
       if (!ok || !window.QRCode) {
-        reportError("Impossible de charger le générateur de QR. Vérifiez votre connexion.");
-        return; // finally remet setDownloading(false)
+        reportError("Composant indisponible. Rechargez la page.");
+        return;
       }
-      // 1) Génère QR en SVG vectoriel (qualité 4K garantie quel que soit le scale)
-      const svgString = await new Promise((resolve, reject) => {
-        QRCode.toString(url, {
-          type: "svg",
-          margin: 1,
+
+      // 1) URL → QR sur canvas 1024×1024 (fond blanc temporaire)
+      const canvas = document.createElement("canvas");
+      await new Promise((resolve, reject) => {
+        QRCode.toCanvas(canvas, url, {
+          width: 1024,
+          margin: 2,
           errorCorrectionLevel: "H",
           color: { dark: palette.dark, light: "#ffffff" },
-        }, (err, svg) => err ? reject(err) : resolve(svg));
+        }, (err) => err ? reject(err) : resolve());
       });
 
-      // 2) Charge le SVG dans une <img> (sandboxé : pas d'exécution de script SVG)
-      const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-      const svgUrl = URL.createObjectURL(svgBlob);
-      let img;
-      try {
-        img = await new Promise((resolve, reject) => {
-          const i = new Image();
-          i.onload = () => resolve(i);
-          i.onerror = () => reject(new Error("SVG load failed"));
-          i.src = svgUrl;
-        });
-      } finally {
-        URL.revokeObjectURL(svgUrl); // libère mémoire même en cas d'erreur
-      }
-
-      // 3) Dessine sur un canvas 2048×2048 (4K) — fond transparent
-      const SIZE = 2048;
-      const canvas = document.createElement("canvas");
-      canvas.width = SIZE;
-      canvas.height = SIZE;
+      // 2) Rend les pixels blancs transparents → PNG transparent
       const ctx = canvas.getContext("2d");
-      ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0, 0, SIZE, SIZE);
-      ctx.drawImage(img, 0, 0, SIZE, SIZE);
-
-      // 4) Élimine tout pixel blanc résiduel → transparence parfaite
-      const imgData = ctx.getImageData(0, 0, SIZE, SIZE);
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const d = imgData.data;
       for (let i = 0; i < d.length; i += 4) {
         if (d[i] > 240 && d[i+1] > 240 && d[i+2] > 240) d[i+3] = 0;
       }
       ctx.putImageData(imgData, 0, 0);
 
-      // 5) Convertit en Blob PNG (préserve l'alpha)
-      const blob = await new Promise((resolve, reject) => {
-        canvas.toBlob((b) => b ? resolve(b) : reject(new Error("toBlob returned null")), "image/png");
-      });
-
-      // 6) Trigger download
-      triggerBlobDownload(blob, filename);
+      // 3) Canvas → Blob PNG → download
+      canvas.toBlob((blob) => {
+        if (!blob) { reportError("Échec de la génération."); return; }
+        triggerBlobDownload(blob, filename);
+      }, "image/png");
     } catch (e) {
-      // Log technique en console (dev only), message générique à l'utilisateur
       if (typeof console !== "undefined" && console.error) console.error("[QR] download failed");
       reportError("Téléchargement impossible. Veuillez réessayer.");
     } finally {

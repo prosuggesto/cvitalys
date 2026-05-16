@@ -32,42 +32,22 @@ const Field = ({ label, children, hint }) => (
   </div>
 );
 
-// ensureQRCode — garantit que window.QRCode est chargé. Tente plusieurs sources.
-// Retourne une promesse qui resolve(true) si chargé, resolve(false) sinon.
-// Sources testées dans l'ordre (toutes HTTPS, intégrité du flux JS non critique
-// car la lib ne traite que l'URL du QR — aucune donnée sensible exposée) :
-//   1. assets/qrcode.min.js  (local, même origine — bypass Tracking Prevention)
-//   2. jsdelivr CDN
-//   3. unpkg CDN
-//   4. cdnjs CDN
-const QR_SOURCES = [
-  "assets/qrcode.min.js",
-  "https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js",
-  "https://unpkg.com/qrcode@1.4.4/build/qrcode.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.4.4/qrcode.min.js",
-];
+// ensureQRCode — garantit que window.QRCode est chargé en injectant le script local
+// si besoin. Pas de fallback CDN tiers : tout reste sur le même domaine (privacy/sécurité).
 let _qrLoadPromise = null;
 function ensureQRCode(timeoutMs = 4000) {
   if (window.QRCode) return Promise.resolve(true);
   if (_qrLoadPromise) return _qrLoadPromise;
   _qrLoadPromise = new Promise((resolve) => {
-    let idx = 0;
     let done = false;
     const settle = (ok) => { if (!done) { done = true; resolve(ok); } };
-    const tryNext = () => {
-      if (done) return;
-      if (window.QRCode) return settle(true);
-      if (idx >= QR_SOURCES.length) return settle(false);
-      const src = QR_SOURCES[idx++];
-      const script = document.createElement("script");
-      script.src = src;
-      script.async = true;
-      script.onload = () => { window.QRCode ? settle(true) : tryNext(); };
-      script.onerror = () => { tryNext(); };
-      document.head.appendChild(script);
-    };
     setTimeout(() => settle(!!window.QRCode), timeoutMs);
-    tryNext();
+    const script = document.createElement("script");
+    script.src = "assets/qrcode.min.js";
+    script.async = true;
+    script.onload = () => settle(!!window.QRCode);
+    script.onerror = () => settle(false);
+    document.head.appendChild(script);
   });
   return _qrLoadPromise;
 }
