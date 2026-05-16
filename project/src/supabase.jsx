@@ -296,19 +296,10 @@ const api = {
     if (blob.size > MAX_AUDIO_BYTES) {
       return Promise.reject(new Error("Audio trop volumineux (max 8 Mo)"));
     }
-    // iOS Safari enregistre en audio/mp4, pas en webm. On dérive l'extension
-    // et le contentType depuis le vrai type du blob pour que le navigateur
-    // puisse relire l'audio (sinon Content-Type webm sur un mp4 = unplayable).
-    const blobType = blob.type || "audio/webm";
-    const ext = /mp4|m4a/i.test(blobType) ? "m4a"
-              : /aac/i.test(blobType)      ? "aac"
-              : /mpeg|mp3/i.test(blobType) ? "mp3"
-              : /ogg/i.test(blobType)      ? "ogg"
-              :                              "webm";
-    const path = `${userId}/${cvId}/audio.${ext}`;
+    const path = `${userId}/${cvId}/audio.webm`;
     return sb.storage
       .from('audio-files')
-      .upload(path, blob, { upsert: true, contentType: blobType })
+      .upload(path, blob, { upsert: true, contentType: 'audio/webm' })
       .then(({ data, error }) => {
         if (error) throw error;
         const { data: urlData } = sb.storage.from('audio-files').getPublicUrl(path);
