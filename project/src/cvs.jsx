@@ -43,13 +43,23 @@ const CVCard = ({ cv, onPresent, onCustomize, onPreview, onDelete, onDownloadQR 
 
 const EmptyCVCard = ({ onClick }) => {
   const { t } = useT();
+  const isMobile = useIsMobile();
   return (
-  <div className="card-empty" onClick={onClick} style={{ padding: 30, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", cursor: "pointer", minHeight: 540, gap: 14 }}>
+  <div className="card-empty" onClick={onClick} style={{
+    padding: isMobile ? 16 : 30,
+    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    textAlign: "center", cursor: "pointer",
+    minHeight: isMobile ? 380 : 540,
+    gap: 14,
+    maxWidth: isMobile ? 340 : "none",
+    margin: isMobile ? "0 auto" : undefined,
+    width: isMobile ? "100%" : undefined
+  }}>
     <div style={{ width: 56, height: 56, borderRadius: "50%", border: "1px dashed var(--border-strong)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" }}>
       <I.Plus size={22}/>
     </div>
     <div>
-      <div className="display" style={{ fontSize: 22, fontWeight: 500 }}>{t("cvs.addTitle")}</div>
+      <div className="display" style={{ fontSize: isMobile ? 18 : 22, fontWeight: 500 }}>{t("cvs.addTitle")}</div>
       <p className="muted" style={{ margin: "6px 24px 0", fontSize: 14, maxWidth: 280 }}>{t("cvs.addSub")}</p>
     </div>
   </div>
@@ -86,7 +96,7 @@ const PresentModal = ({ cv, open, onClose, onCopy, qrSrc }) => {
           <p className="muted" style={{ marginBottom: 20, fontSize: 14, lineHeight: 1.55 }}>
             {t("cvs.modal.present.body")}
           </p>
-          <div style={{ padding: qrPadding, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, display: "flex", justifyContent: "center" }}>
+          <div style={{ padding: qrPadding, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, display: "flex", justifyContent: "center", width: "fit-content", margin: "0 auto" }}>
             <QRBlock size={qrSize} url={publicUrl} cachedSrc={qrSrc}/>
           </div>
           <button className="btn btn--primary btn--block btn--lg" style={{ marginTop: 18 }} onClick={handleCopy}>
