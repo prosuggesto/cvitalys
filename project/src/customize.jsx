@@ -400,7 +400,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
               <div style={{ fontWeight: 500 }}>{t("custom.previewBox.title")}</div>
               <div className="muted" style={{ fontSize: 13 }}>{t("custom.previewBox.sub")}</div>
             </div>
-            <div className="row gap-8" style={{ flexWrap: "wrap" }}>
+            <div className="row gap-8" style={{ flexShrink: 0 }}>
               <button className="btn btn--secondary" disabled={saving} onClick={() => handleSave().then(() => onPreview(local)).catch(() => {})} style={isMobile ? { flex: 1 } : undefined}>
                 <I.Eye size={14} /> {t("common.preview")}
               </button>
