@@ -90,10 +90,10 @@ const InteractionsTable = ({ interactions, lang }) => {
           </tr>
         </thead>
         <tbody>
-          {interactions.map((it) => {
+          {interactions.map((it, idx) => {
             const isExchange = it.type === 'exchange';
             return (
-              <tr key={it.id} style={{ borderBottom: "1px solid var(--border-soft)" }}>
+              <tr key={it.id} style={idx > 0 ? { borderTop: "1px solid var(--border-soft)" } : undefined}>
                 <td style={{ padding: "14px 12px 14px 0", verticalAlign: "top" }}>
                   <div style={{ fontWeight: 500, color: "var(--ink)" }}>{it.recruteur || anonymous}</div>
                   {it.entreprise && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{it.entreprise}</div>}

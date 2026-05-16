@@ -207,7 +207,7 @@ const AnalyticsPreview = () => {
               {interactions.map((it, idx) => {
                 const isExchange = it.type === "exchange";
                 return (
-                  <tr key={idx} style={{ borderBottom: "1px solid var(--border-soft)" }}>
+                  <tr key={idx} style={idx > 0 ? { borderTop: "1px solid var(--border-soft)" } : undefined}>
                     <td style={{ padding: "14px 12px 14px 0", verticalAlign: "top" }}>
                       <div style={{ fontWeight: 500, color: "var(--ink)" }}>{it.name}</div>
                       <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{it.company}</div>
