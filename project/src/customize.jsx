@@ -260,7 +260,7 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
           </div>
         } />
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.05fr) minmax(0, 1fr)", gap: isMobile ? 16 : 28, alignItems: "flex-start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.05fr) minmax(0, 1fr)", gap: isMobile ? 16 : 28, alignItems: isMobile ? "flex-start" : "center" }}>
         {/* Colonne gauche : PDF + Audio */}
         <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 16 : 20, position: isMobile ? "static" : "sticky", top: 92 }}>
 
