@@ -76,13 +76,13 @@ const AnalyticsPreview = () => {
   const isMobile = useIsMobile(720);
   const [tab, setTab] = useState("overview");
 
-  // Labels courts sur mobile pour tenir dans la grille quincunx
+  // Labels : seules les 2 premières (longues) sont abrégées sur mobile
   const tabs = [
     { id: "overview",     label: isMobile ? "Vue" : t("landing.analytics.tab1") },
     { id: "channels",     label: isMobile ? "Clics" : t("landing.analytics.tab2") },
-    { id: "champions",    label: isMobile ? "Top" : t("landing.analytics.tab3") },
+    { id: "champions",    label: t("landing.analytics.tab3") },
     { id: "audio",        label: t("landing.analytics.tab4") },
-    { id: "interactions", label: isMobile ? "Inter." : t("landing.analytics.tab5") },
+    { id: "interactions", label: t("landing.analytics.tab5") },
   ];
 
   // Mock interactions récentes — réplique exacte du tableau analytics
