@@ -425,6 +425,12 @@ const Landing = ({ navigate }) => {
 
       <footer style={{ borderTop: "1px solid var(--border)", padding: "32px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
         <Brand size={18}/>
+        <div style={{ marginTop: 14, display: "flex", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
+          <a href="#/legal/mentions" style={{ color: "inherit", textDecoration: "none" }}>Mentions légales</a>
+          <a href="#/legal/privacy" style={{ color: "inherit", textDecoration: "none" }}>Confidentialité</a>
+          <a href="#/legal/terms" style={{ color: "inherit", textDecoration: "none" }}>CGU</a>
+          <a href="#/legal/cookies" style={{ color: "inherit", textDecoration: "none" }}>Cookies</a>
+        </div>
         <div style={{ marginTop: 12 }}>CVitalis · {t("brand.tagline")} · © 2026</div>
       </footer>
     </div>

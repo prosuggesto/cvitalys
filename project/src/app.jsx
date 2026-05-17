@@ -111,6 +111,7 @@ function AppInner() {
   const isApp = route.startsWith("/app");
   const isAuthRoute = route.startsWith("/auth/");
   const isPublicRoute = route.startsWith("/cv/") || route.startsWith("/nfc/");
+  const isLegalRoute = route.startsWith("/legal/");
 
   // Écran de chargement pendant l'init
   if (loading) return <LoadingScreen/>;
@@ -197,6 +198,14 @@ function AppInner() {
   } else if (route.startsWith("/nfc/")) {
     const code = route.replace("/nfc/", "");
     page = <NfcRedirect code={code} navigate={navigate}/>;
+  } else if (route === "/legal/mentions") {
+    page = <LegalMentions navigate={navigate}/>;
+  } else if (route === "/legal/privacy") {
+    page = <LegalPrivacy navigate={navigate}/>;
+  } else if (route === "/legal/terms") {
+    page = <LegalTerms navigate={navigate}/>;
+  } else if (route === "/legal/cookies") {
+    page = <LegalCookies navigate={navigate}/>;
   } else {
     page = (
       <div data-no-chrome style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
