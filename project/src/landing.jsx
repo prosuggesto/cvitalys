@@ -103,29 +103,31 @@ const AnalyticsPreview = () => {
   const maxClick = Math.max(...channels.map((c) => c.value));
 
   return (
-    <div className="card" style={{ padding: 24, background: "var(--surface)" }}>
+    <div className="card analytics-preview" style={{ padding: 24, background: "var(--surface)" }}>
       {/* Barre de filtres mock — réplique de la vraie page Analytics */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap", alignItems: "center", padding: 12, background: "var(--surface-2)", border: "1px solid var(--border-soft)", borderRadius: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 13, color: "var(--ink-2)", fontWeight: 500 }}>
+      <div className="analytics-preview__filters" style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap", alignItems: "center", padding: 12, background: "var(--surface-2)", border: "1px solid var(--border-soft)", borderRadius: 12 }}>
+        <div className="analytics-preview__pill" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 13, color: "var(--ink-2)", fontWeight: 500 }}>
           <I.Calendar size={13} stroke="var(--muted)"/> {t("landing.analytics.filter.period")}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 13, color: "var(--ink-2)", fontWeight: 500 }}>
+        <div className="analytics-preview__pill" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 13, color: "var(--ink-2)", fontWeight: 500 }}>
           <I.Grid size={13} stroke="var(--muted)"/> {t("landing.analytics.filter.sector")}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 13, color: "var(--ink-2)", fontWeight: 500 }}>
+        <div className="analytics-preview__pill" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, fontSize: 13, color: "var(--ink-2)", fontWeight: 500 }}>
           <I.Cv size={13} stroke="var(--muted)"/> {t("landing.analytics.filter.cv")}
         </div>
-        <div style={{ marginLeft: "auto", padding: "8px 18px", background: "var(--ink)", color: "#F7F3EC", borderRadius: 999, fontSize: 13, fontWeight: 500 }}>
+        <div className="analytics-preview__filter-btn" style={{ marginLeft: "auto", padding: "8px 18px", background: "var(--ink)", color: "#F7F3EC", borderRadius: 999, fontSize: 13, fontWeight: 500 }}>
           {t("landing.analytics.filter.btn")}
         </div>
       </div>
 
-      {/* Onglets */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 22, flexWrap: "wrap", padding: 4, background: "var(--surface-2)", borderRadius: 999, width: "fit-content" }}>
-        {tabs.map((tt) => (
+      {/* Onglets — pill row sur desktop, quincunx (X pattern) sur mobile */}
+      <div className="analytics-preview__tabs" style={{ display: "flex", gap: 6, marginBottom: 22, flexWrap: "wrap", padding: 4, background: "var(--surface-2)", borderRadius: 999, width: "fit-content" }}>
+        {tabs.map((tt, i) => (
           <button
             key={tt.id}
+            data-tab-pos={i}
             onClick={() => setTab(tt.id)}
+            className={"analytics-preview__tab" + (tab === tt.id ? " is-active" : "")}
             style={{
               padding: "8px 14px",
               borderRadius: 999,
@@ -279,13 +281,31 @@ const BenefitRow = ({ title, body, num }) => (
 const LangSwitch = () => {
   const { lang, setLang } = useT();
   return (
-    <div style={{ display: "inline-flex", padding: 3, background: "var(--surface-2)", border: "1px solid var(--border-soft)", borderRadius: 999, gap: 2, marginLeft: 8 }}>
-      {["fr","es"].map((l) => (
-        <button key={l} onClick={() => setLang(l)} style={{ padding: "5px 10px", borderRadius: 999, fontSize: 12, border: "none", background: lang === l ? "var(--ink)" : "transparent", color: lang === l ? "#F7F3EC" : "var(--muted)", fontWeight: 500, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-          {l}
-        </button>
-      ))}
-    </div>
+    <select
+      value={lang}
+      onChange={(e) => setLang(e.target.value)}
+      aria-label="Langue"
+      style={{
+        appearance: "none",
+        WebkitAppearance: "none",
+        background: "var(--surface-2)",
+        border: "1px solid var(--border-soft)",
+        borderRadius: 999,
+        padding: "6px 22px 6px 12px",
+        fontSize: 12,
+        fontWeight: 500,
+        color: "var(--ink)",
+        textTransform: "uppercase",
+        letterSpacing: "0.06em",
+        cursor: "pointer",
+        marginLeft: 6,
+        backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 14 14'><path d='M3.5 5.5 7 9l3.5-3.5' fill='none' stroke='%231B1814' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>\")",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 6px center",
+      }}>
+      <option value="fr">FR</option>
+      <option value="es">ES</option>
+    </select>
   );
 };
 

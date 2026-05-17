@@ -520,11 +520,7 @@ input, textarea, select { font-family: inherit; color: inherit; }
   .hero__preview .audio-play { width: 32px; height: 32px; }
 }
 
-/* Très petit écran (<=420px) : cacher le bouton 'Se connecter' pour
-   laisser la place au bouton primaire 'Créer mon CV' sans qu'il soit coupé */
-@media (max-width: 420px) {
-  .landing-nav .btn--ghost { display: none; }
-}
+/* Se connecter reste visible sur mobile maintenant que LangSwitch est compact (juste FR/ES dropdown) */
 
   /* Toutes les sections landing : padding latéral max 16px */
   #fonctionnement,
@@ -551,6 +547,17 @@ input, textarea, select { font-family: inherit; color: inherit; }
   /* Sous-section H3 (32px inline) → 22px */
   #fonctionnement h3.display { font-size: 22px !important; }
 
+  /* StepCard + ShareCard : padding/typo plus compacts pour ne pas
+     prendre toute la hauteur de l'écran */
+  #fonctionnement .card { padding: 18px !important; }
+  #fonctionnement .card .step-bubble { width: 26px !important; height: 26px !important; font-size: 12px !important; }
+  #fonctionnement .card h3.display { font-size: 18px !important; margin: 10px 0 6px !important; }
+  #fonctionnement .card p { font-size: 13px !important; line-height: 1.5 !important; }
+  /* ShareCard : icône-box plus petite */
+  #fonctionnement .card > div:first-child[style*="background"] {
+    width: 36px !important; height: 36px !important; border-radius: 10px !important;
+  }
+
   /* BenefitRow : lettrine moins large + padding réduit */
   #valeur [class*="reveal"] > div[style*="grid-template-columns"] {
     grid-template-columns: 36px 1fr !important;
@@ -569,6 +576,62 @@ input, textarea, select { font-family: inherit; color: inherit; }
 
   /* Footer : padding réduit */
   footer { padding: 24px 16px !important; }
+
+  /* AnalyticsPreview filtres : forcer en row horizontal (3 pills + btn) */
+  .analytics-preview__filters {
+    flex-wrap: nowrap !important;
+    padding: 8px !important;
+    gap: 4px !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .analytics-preview__pill {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    gap: 4px !important;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .analytics-preview__filter-btn {
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+    flex-shrink: 0;
+    margin-left: 0 !important;
+  }
+
+  /* Onglets en quincunx (X) : 3 colonnes, 3 rangées avec cellules
+     vides pour former le pattern :
+       1 . 2
+       . 3 .
+       4 . 5  */
+  .analytics-preview__tabs {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    grid-template-rows: auto auto auto !important;
+    gap: 6px !important;
+    width: 100% !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+  .analytics-preview__tab {
+    text-align: center;
+    background: var(--surface-2) !important;
+    font-size: 11px !important;
+    padding: 9px 6px !important;
+    border: 1px solid var(--border-soft) !important;
+  }
+  .analytics-preview__tab.is-active {
+    background: var(--ink) !important;
+    color: #F7F3EC !important;
+    border-color: var(--ink) !important;
+  }
+  /* Placement quincunx : Vue d'ensemble (0), Clics canal (1), Champions (2), Audio (3), Dernières interactions (4) */
+  .analytics-preview__tab[data-tab-pos="0"] { grid-column: 1; grid-row: 1; }
+  .analytics-preview__tab[data-tab-pos="1"] { grid-column: 3; grid-row: 1; }
+  .analytics-preview__tab[data-tab-pos="2"] { grid-column: 2; grid-row: 2; }
+  .analytics-preview__tab[data-tab-pos="3"] { grid-column: 1; grid-row: 3; }
+  .analytics-preview__tab[data-tab-pos="4"] { grid-column: 3; grid-row: 3; }
 }
 
 /* ---------- Mobile (≤600px) — corrige l'overflow + tailles ---------- */
