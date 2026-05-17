@@ -26,14 +26,10 @@ const HeroPreview = () => {
           <h3 className="display" style={{ fontSize: isMobile ? 18 : 32, margin: "2px 0 2px", fontWeight: 500, wordWrap: "break-word" }}>Diego Lamperim</h3>
           <div style={{ fontSize: 12, color: "var(--gold-deep)" }}>Réceptionniste · Hôtellerie</div>
           <div className="audio-player" style={{ marginTop: 10 }}>
-            <button className="audio-play"><I.Play size={12}/></button>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="audio-bar"><div className="audio-bar__progress" style={{ width: "32%" }}/></div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                <span className="audio-time" style={{ fontSize: 10 }}>0:21</span>
-                <span className="audio-time" style={{ fontSize: 10 }}>1:08</span>
-              </div>
-            </div>
+            <button className="audio-play"><I.Play size={isMobile ? 12 : 14}/></button>
+            <span className="audio-time" style={{ fontSize: isMobile ? 10 : 12 }}>0:21</span>
+            <div className="audio-bar"><div className="audio-bar__progress" style={{ width: "32%" }}/></div>
+            <span className="audio-time" style={{ fontSize: isMobile ? 10 : 12 }}>1:08</span>
           </div>
         </div>
       </div>
