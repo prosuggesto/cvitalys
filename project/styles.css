@@ -509,10 +509,15 @@ input, textarea, select { font-family: inherit; color: inherit; }
     hyphens: auto;
     max-width: 100%;
   }
-  /* CTA buttons hero : plus compacts qu'avant */
-  .hero__cta .btn { font-size: 13px; padding: 10px 14px; }
-  .hero__cta .btn--lg { font-size: 13px !important; padding: 11px 16px !important; }
-  .hero__preview { padding: 16px; border-radius: 18px; }
+  /* CTA buttons hero : encore plus compacts */
+  .hero__cta { gap: 8px; }
+  .hero__cta .btn { font-size: 12px !important; padding: 9px 12px !important; }
+  .hero__cta .btn--lg { font-size: 12px !important; padding: 9px 12px !important; }
+  .hero__cta .btn svg { width: 13px; height: 13px; }
+
+  /* HeroPreview : padding réduit pour gagner de la largeur intérieure */
+  .hero__preview { padding: 14px; border-radius: 16px; box-shadow: var(--shadow-card); }
+  .hero__preview .audio-play { width: 32px; height: 32px; }
 }
 
 /* Très petit écran (<=420px) : cacher le bouton 'Se connecter' pour

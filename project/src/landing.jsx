@@ -3,48 +3,49 @@
 const HeroPreview = () => {
   const { t } = useT();
   const isMobile = useIsMobile(720);
-  const cvScale = isMobile ? 0.5 : 0.7;
-  const cvColWidth = isMobile ? 155 : 230;
+  const cvScale = isMobile ? 0.4 : 0.7;
+  const cvColWidth = isMobile ? 130 : 230;
+  const iconBtnSize = isMobile ? 34 : 40;
   return (
     <div className="hero__preview">
-      <div style={{ position: "absolute", top: -14, left: 18, padding: "5px 12px", borderRadius: 999, background: "var(--ink)", color: "#F7F3EC", fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+      <div style={{ position: "absolute", top: -12, left: 14, padding: "4px 10px", borderRadius: 999, background: "var(--ink)", color: "#F7F3EC", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase" }}>
         {t("landing.hero.scanned")}
       </div>
       <div style={{
         display: "grid",
         gridTemplateColumns: isMobile ? "1fr" : `${cvColWidth}px 1fr`,
-        gap: isMobile ? 14 : 22,
+        gap: isMobile ? 10 : 22,
         alignItems: "center",
         textAlign: isMobile ? "center" : "left"
       }}>
         <div style={{ display: "flex", justifyContent: "center" }}>
           <CVPreviewVisual cv={MOCK.initialCvs[0]} scale={cvScale}/>
         </div>
-        <div>
-          <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--muted)" }}>{t("landing.hero.candidate")}</div>
-          <h3 className="display" style={{ fontSize: isMobile ? 22 : 32, margin: "4px 0 4px", fontWeight: 500 }}>Diego Lamperim</h3>
-          <div style={{ fontSize: 13, color: "var(--gold-deep)" }}>Réceptionniste · Hôtellerie</div>
-          <div className="audio-player" style={{ marginTop: 12 }}>
-            <button className="audio-play"><I.Play size={14}/></button>
-            <div style={{ flex: 1 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--muted)" }}>{t("landing.hero.candidate")}</div>
+          <h3 className="display" style={{ fontSize: isMobile ? 18 : 32, margin: "2px 0 2px", fontWeight: 500, wordWrap: "break-word" }}>Diego Lamperim</h3>
+          <div style={{ fontSize: 12, color: "var(--gold-deep)" }}>Réceptionniste · Hôtellerie</div>
+          <div className="audio-player" style={{ marginTop: 10 }}>
+            <button className="audio-play"><I.Play size={12}/></button>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div className="audio-bar"><div className="audio-bar__progress" style={{ width: "32%" }}/></div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                <span className="audio-time">0:21</span>
-                <span className="audio-time">1:08</span>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                <span className="audio-time" style={{ fontSize: 10 }}>0:21</span>
+                <span className="audio-time" style={{ fontSize: 10 }}>1:08</span>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 18 }}>
-        <button className="btn btn--primary" style={isMobile ? { padding: "10px 12px", fontSize: 13 } : undefined}><I.ThumbsUp size={isMobile ? 14 : 16}/> {t("landing.hero.exchange")}</button>
-        <button className="btn btn--secondary" style={isMobile ? { padding: "10px 12px", fontSize: 13 } : undefined}><I.Feedback size={isMobile ? 14 : 16}/> {t("landing.hero.feedback")}</button>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
+        <button className="btn btn--primary" style={isMobile ? { padding: "8px 10px", fontSize: 12 } : undefined}><I.ThumbsUp size={isMobile ? 12 : 16}/> {t("landing.hero.exchange")}</button>
+        <button className="btn btn--secondary" style={isMobile ? { padding: "8px 10px", fontSize: 12 } : undefined}><I.Feedback size={isMobile ? 12 : 16}/> {t("landing.hero.feedback")}</button>
       </div>
-      <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 14 }}>
-        <button className="icon-btn" style={{ width: 40, height: 40, border: "1px solid var(--border)", borderRadius: "50%", padding: 0, overflow: "hidden", background: "var(--surface)" }}><BrandLogo name="whatsapp" size={20}/></button>
-        <button className="icon-btn" style={{ width: 40, height: 40, border: "1px solid var(--border)", borderRadius: "50%", padding: 0, overflow: "hidden", background: "var(--surface)" }}><BrandLogo name="gmail" size={20}/></button>
-        <button className="icon-btn" style={{ width: 40, height: 40, border: "1px solid var(--border)", borderRadius: "50%", padding: 0, overflow: "hidden", background: "var(--surface)" }}><BrandLogo name="linkedin" size={18}/></button>
-        <button className="icon-btn" style={{ width: 40, height: 40, border: "1px solid var(--border)", borderRadius: "50%", padding: 0, overflow: "hidden", background: "var(--surface)" }}><BrandLogo name="instagram" size={20}/></button>
+      <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 12 }}>
+        <button className="icon-btn" style={{ width: iconBtnSize, height: iconBtnSize, border: "1px solid var(--border)", borderRadius: "50%", padding: 0, overflow: "hidden", background: "var(--surface)" }}><BrandLogo name="whatsapp" size={isMobile ? 17 : 22}/></button>
+        <button className="icon-btn" style={{ width: iconBtnSize, height: iconBtnSize, border: "1px solid var(--border)", borderRadius: "50%", padding: 0, overflow: "hidden", background: "var(--surface)" }}><BrandLogo name="gmail" size={isMobile ? 17 : 22}/></button>
+        <button className="icon-btn" style={{ width: iconBtnSize, height: iconBtnSize, border: "1px solid var(--border)", borderRadius: "50%", padding: 0, overflow: "hidden", background: "var(--surface)" }}><BrandLogo name="linkedin" size={isMobile ? 15 : 20}/></button>
+        <button className="icon-btn" style={{ width: iconBtnSize, height: iconBtnSize, border: "1px solid var(--border)", borderRadius: "50%", padding: 0, overflow: "hidden", background: "var(--surface)" }}><BrandLogo name="instagram" size={isMobile ? 17 : 22}/></button>
       </div>
     </div>
   );
