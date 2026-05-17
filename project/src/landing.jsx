@@ -218,53 +218,94 @@ const AnalyticsPreview = () => {
       )}
 
       {tab === "interactions" && (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ textAlign: "left", color: "var(--muted)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500 }}>
-                <th style={{ padding: "10px 12px 10px 0", borderBottom: "1px solid var(--border)" }}>Recruteur</th>
-                <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>Action</th>
-                <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>Message</th>
-                <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>RDV</th>
-                <th style={{ padding: "10px 0 10px 12px", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap", textAlign: "right" }}>Quand</th>
-              </tr>
-            </thead>
-            <tbody>
-              {interactions.map((it, idx) => {
-                const isExchange = it.type === "exchange";
-                return (
-                  <tr key={idx} style={idx > 0 ? { borderTop: "1px solid var(--border-soft)" } : undefined}>
-                    <td style={{ padding: "14px 12px 14px 0", verticalAlign: "top" }}>
-                      <div style={{ fontWeight: 500, color: "var(--ink)" }}>{it.name}</div>
-                      <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{it.company}</div>
-                      <div className="muted" style={{ fontSize: 10.5, marginTop: 4, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{it.cv_name}</div>
-                    </td>
-                    <td style={{ padding: "14px 12px", verticalAlign: "top" }}>
-                      <span style={{
-                        display: "inline-flex", alignItems: "center", gap: 6,
-                        fontSize: 12, padding: "4px 10px", borderRadius: 999, fontWeight: 500, whiteSpace: "nowrap",
-                        background: isExchange ? "var(--ink)" : "var(--gold-soft)",
-                        color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
-                      }}>
-                        {isExchange ? <I.ThumbsUp size={11}/> : <I.Feedback size={11}/>}
-                        {isExchange ? labelExchange : labelFeedback}
-                      </span>
-                    </td>
-                    <td style={{ padding: "14px 12px", verticalAlign: "top", color: "var(--ink-2)", lineHeight: 1.5, fontStyle: "italic" }}>
-                      « {it.message} »
-                    </td>
-                    <td style={{ padding: "14px 12px", verticalAlign: "top", whiteSpace: "nowrap", color: it.rdv ? "var(--gold-deep)" : "var(--muted)", fontVariantNumeric: "tabular-nums", textAlign: it.rdv ? "left" : "center" }}>
-                      {it.rdv || '—'}
-                    </td>
-                    <td style={{ padding: "14px 0 14px 12px", verticalAlign: "top", whiteSpace: "nowrap", textAlign: "right", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
-                      {it.when}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        isMobile ? (
+          /* Mobile : cartes empilées (le tableau 5-col déborde) */
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {interactions.map((it, idx) => {
+              const isExchange = it.type === "exchange";
+              return (
+                <div key={idx} style={{ padding: 14, background: "var(--surface-2)", border: "1px solid var(--border-soft)", borderRadius: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, color: "var(--ink)", fontSize: 13 }}>{it.name}</div>
+                      <div className="muted" style={{ fontSize: 11, marginTop: 1 }}>{it.company}</div>
+                    </div>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      fontSize: 10, padding: "3px 8px", borderRadius: 999, fontWeight: 500, whiteSpace: "nowrap",
+                      background: isExchange ? "var(--ink)" : "var(--gold-soft)",
+                      color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
+                      flexShrink: 0,
+                    }}>
+                      {isExchange ? <I.ThumbsUp size={10}/> : <I.Feedback size={10}/>}
+                      {isExchange ? labelExchange : labelFeedback}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.45, fontStyle: "italic" }}>
+                    « {it.message} »
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "var(--muted)", paddingTop: 4, borderTop: "1px dashed var(--border-soft)" }}>
+                    {it.rdv ? (
+                      <span style={{ color: "var(--gold-deep)" }}>📅 {it.rdv}</span>
+                    ) : (
+                      <span>{it.cv_name}</span>
+                    )}
+                    <span>{it.when}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Desktop : tableau classique 5 colonnes */
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ textAlign: "left", color: "var(--muted)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500 }}>
+                  <th style={{ padding: "10px 12px 10px 0", borderBottom: "1px solid var(--border)" }}>Recruteur</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>Action</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>Message</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>RDV</th>
+                  <th style={{ padding: "10px 0 10px 12px", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap", textAlign: "right" }}>Quand</th>
+                </tr>
+              </thead>
+              <tbody>
+                {interactions.map((it, idx) => {
+                  const isExchange = it.type === "exchange";
+                  return (
+                    <tr key={idx} style={idx > 0 ? { borderTop: "1px solid var(--border-soft)" } : undefined}>
+                      <td style={{ padding: "14px 12px 14px 0", verticalAlign: "top" }}>
+                        <div style={{ fontWeight: 500, color: "var(--ink)" }}>{it.name}</div>
+                        <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{it.company}</div>
+                        <div className="muted" style={{ fontSize: 10.5, marginTop: 4, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{it.cv_name}</div>
+                      </td>
+                      <td style={{ padding: "14px 12px", verticalAlign: "top" }}>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                          fontSize: 12, padding: "4px 10px", borderRadius: 999, fontWeight: 500, whiteSpace: "nowrap",
+                          background: isExchange ? "var(--ink)" : "var(--gold-soft)",
+                          color: isExchange ? "#F7F3EC" : "var(--gold-deep)",
+                        }}>
+                          {isExchange ? <I.ThumbsUp size={11}/> : <I.Feedback size={11}/>}
+                          {isExchange ? labelExchange : labelFeedback}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 12px", verticalAlign: "top", color: "var(--ink-2)", lineHeight: 1.5, fontStyle: "italic" }}>
+                        « {it.message} »
+                      </td>
+                      <td style={{ padding: "14px 12px", verticalAlign: "top", whiteSpace: "nowrap", color: it.rdv ? "var(--gold-deep)" : "var(--muted)", fontVariantNumeric: "tabular-nums", textAlign: it.rdv ? "left" : "center" }}>
+                        {it.rdv || '—'}
+                      </td>
+                      <td style={{ padding: "14px 0 14px 12px", verticalAlign: "top", whiteSpace: "nowrap", textAlign: "right", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>
+                        {it.when}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
     </div>
   );
