@@ -221,6 +221,7 @@ function AppInner() {
         <React.Fragment>
           <AppHeader title={titleFor(route)} onMenu={() => setDrawerOpen(true)} user={user}/>
           <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} user={user} currentRoute={route} navigate={navigate} onLogout={() => { setDrawerOpen(false); handleLogout(); }}/>
+          <InstallTutorial/>
         </React.Fragment>
       )}
       {page}
