@@ -577,27 +577,44 @@ input, textarea, select { font-family: inherit; color: inherit; }
   /* Footer : padding réduit */
   footer { padding: 24px 16px !important; }
 
-  /* AnalyticsPreview filtres : forcer en row horizontal (3 pills + btn) */
+  /* AnalyticsPreview : la card ne dépasse jamais du viewport */
+  .analytics-preview { overflow: hidden; }
+  .analytics-preview > * { max-width: 100%; }
+
+  /* Filtres : grid 2×2 — 30j+Secteurs en haut, Tous CV+Filtrer en bas */
   .analytics-preview__filters {
-    flex-wrap: nowrap !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
     padding: 8px !important;
-    gap: 4px !important;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible !important;
   }
   .analytics-preview__pill {
-    padding: 6px 10px !important;
+    padding: 7px 8px !important;
     font-size: 11px !important;
     gap: 4px !important;
-    flex-shrink: 0;
+    justify-content: center;
+    min-width: 0 !important;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .analytics-preview__filter-btn {
-    padding: 6px 12px !important;
+    padding: 7px 8px !important;
     font-size: 11px !important;
-    flex-shrink: 0;
     margin-left: 0 !important;
+    text-align: center;
   }
+
+  /* Stat tiles : 1 colonne (sinon minmax(180px) déborde) */
+  .analytics-preview .grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .analytics-preview .stat { padding: 14px 16px !important; }
+  .analytics-preview .stat__value { font-size: 26px !important; }
+  .analytics-preview .stat__label { font-size: 11px !important; }
+  .analytics-preview .stat__trend { font-size: 11px !important; }
 
   /* Onglets en quincunx (X) : 3 colonnes, 3 rangées avec cellules
      vides pour former le pattern :
@@ -608,18 +625,25 @@ input, textarea, select { font-family: inherit; color: inherit; }
     display: grid !important;
     grid-template-columns: 1fr 1fr 1fr !important;
     grid-template-rows: auto auto auto !important;
-    gap: 6px !important;
+    gap: 4px !important;
     width: 100% !important;
+    max-width: 100% !important;
     background: transparent !important;
     padding: 0 !important;
     border-radius: 0 !important;
+    margin-bottom: 16px !important;
   }
   .analytics-preview__tab {
     text-align: center;
     background: var(--surface-2) !important;
-    font-size: 11px !important;
-    padding: 9px 6px !important;
+    font-size: 10px !important;
+    padding: 8px 4px !important;
     border: 1px solid var(--border-soft) !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
   .analytics-preview__tab.is-active {
     background: var(--ink) !important;
