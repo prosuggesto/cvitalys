@@ -23,7 +23,7 @@ const I = {
   Copy: (p) => <Icon {...p}><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></Icon>,
   Open: (p) => <Icon {...p}><path d="M5 12h14" /><polyline points="13 6 19 12 13 18" /></Icon>,
   Mic: (p) => <Icon {...p}><rect x="9" y="3" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0 0 14 0" /><line x1="12" y1="18" x2="12" y2="22" /></Icon>,
-  Play: (p) => <Icon {...p}><path d="M8 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 8 5.5z" fill="currentColor" stroke="none" /></Icon>,
+  Play: (p) => <Icon {...p}><path d="M6 5.5v13a1 1 0 0 0 1.5.87l11-6.5a1 1 0 0 0 0-1.74l-11-6.5A1 1 0 0 0 6 5.5z" fill="currentColor" stroke="none" /></Icon>,
   Pause: (p) => <Icon {...p}><rect x="6" y="4" width="4" height="16" rx="1.5" fill="currentColor" stroke="none" /><rect x="14" y="4" width="4" height="16" rx="1.5" fill="currentColor" stroke="none" /></Icon>,
   Upload: (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></Icon>,
   Check: (p) => <Icon {...p}><polyline points="20 6 9 17 4 12" /></Icon>,
