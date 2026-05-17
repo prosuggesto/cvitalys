@@ -31,14 +31,35 @@ const isStandalone = () => {
   return false;
 };
 
+// Force-show via URL hash : permet à un user de réouvrir le tutorial même
+// après l'avoir dismissed définitivement (utile pour le bouton manuel)
+const isForceShow = () => {
+  try {
+    return /(\?|#)install-help/i.test(window.location.href || "");
+  } catch (_) { return false; }
+};
+
 // Doit-on afficher le tutorial à cet user ?
 const shouldShowTutorial = () => {
+  if (isForceShow()) return true;            // override : always show
+  if (isStandalone()) return false;          // déjà installé en PWA
   try {
     if (localStorage.getItem(TUTORIAL_KEY_DISMISSED) === "1") return false;
-    if (isStandalone()) return false;          // déjà installé
-    if (!isIOS()) return false;                // pour l'instant : iOS uniquement
-    return true;
-  } catch (_) { return false; }
+  } catch (_) {
+    // localStorage non dispo (private mode?) → on continue, on montre
+  }
+  if (!isIOS()) return false;                // pour l'instant : iOS uniquement
+  return true;
+};
+
+// Reset complet des flags (utilisé par le bouton manuel)
+window.resetInstallTutorial = () => {
+  try {
+    localStorage.removeItem("cvitalys.install.dismissed");
+    localStorage.removeItem("cvitalys.install.minimized");
+    window.location.hash = "#install-help";
+    setTimeout(() => window.location.reload(), 50);
+  } catch (_) {}
 };
 
 const TUTORIAL_STEPS = [

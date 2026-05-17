@@ -45,6 +45,11 @@ const Drawer = ({ open, onClose, user, currentRoute, navigate, onLogout }) => {
         })}
       </nav>
       <div style={{ marginTop: "auto", paddingTop: 18, borderTop: "1px solid var(--border-soft)" }}>
+        {/* Installer l'app — relance le tutorial PWA même s'il a été dismissed */}
+        <button className="nav-item" onClick={() => { onClose(); if (window.resetInstallTutorial) window.resetInstallTutorial(); }}>
+          <I.Download size={18} className="nav-icon"/>
+          <span>Installer l'app</span>
+        </button>
         {(() => {
           const account = NAV.find((n) => n.id === "account");
           const Ico = I[account.icon];
