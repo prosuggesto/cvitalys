@@ -44,23 +44,59 @@ const shouldShowTutorial = () => {
 const TUTORIAL_STEPS = [
   {
     title: "Étape 1 — Bouton Partager",
-    body: "Dans Safari, appuyez sur l'icône Partager en bas (le carré avec une flèche vers le haut). Faites défiler la liste vers le bas et appuyez sur Plus.",
-    img: "assets/install-tutorial/step1.png",
-    alt: "Menu Partager de Safari avec le bouton Plus",
+    body: "Dans Safari, appuyez sur l'icône Partager en bas (le carré avec la flèche vers le haut).",
+    type: "illustration",
   },
   {
     title: "Étape 2 — Toutes les actions",
-    body: "Dans la liste étendue, faites défiler jusqu'à trouver « Sur l'écran d'accueil » avec l'icône ⊕.",
-    img: "assets/install-tutorial/step2.png",
-    alt: "Liste d'actions étendue de Safari",
+    body: "Appuyez sur les trois petits points « Plus » pour afficher toutes les actions disponibles.",
+    img: "assets/install-tutorial/step1.png",
+    alt: "Menu Partager de Safari avec le bouton Plus",
+    highlight: { left: 76, top: 56, width: 19, height: 13, shape: "circle" },
   },
   {
     title: "Étape 3 — Ajouter CVitalis",
     body: "Appuyez sur « Sur l'écran d'accueil », puis validez en haut à droite. CVitalis apparaît alors sur votre écran d'accueil comme une vraie app.",
     img: "assets/install-tutorial/step3.png",
     alt: "Option Sur l'écran d'accueil",
+    highlight: { left: 4, top: 70, width: 92, height: 5.5, shape: "rect" },
+    zoom: 0.78, // dézoomé pour voir plus de contexte
   },
 ];
+
+// Illustration custom de la barre Safari pour l'étape 1 (pas de vraie capture
+// disponible montrant à la fois le contenu de la page et la toolbar du bas)
+const SafariToolbarIllustration = () => (
+  <div className="install-tuto__safari">
+    {/* Faux contenu de page au-dessus */}
+    <div className="install-tuto__safari-page">
+      <div className="install-tuto__safari-url">cvitalys.vercel.app</div>
+      <div className="install-tuto__safari-body">
+        <div style={{ height: 10, width: "70%", background: "var(--border-strong)", borderRadius: 4, marginBottom: 8 }}/>
+        <div style={{ height: 10, width: "55%", background: "var(--border-strong)", borderRadius: 4, marginBottom: 16 }}/>
+        <div style={{ height: 6, width: "100%", background: "var(--border-soft)", borderRadius: 3, marginBottom: 5 }}/>
+        <div style={{ height: 6, width: "100%", background: "var(--border-soft)", borderRadius: 3, marginBottom: 5 }}/>
+        <div style={{ height: 6, width: "85%", background: "var(--border-soft)", borderRadius: 3 }}/>
+      </div>
+    </div>
+    {/* Toolbar Safari du bas */}
+    <div className="install-tuto__safari-toolbar">
+      <span className="install-tuto__safari-icon">‹</span>
+      <span className="install-tuto__safari-icon">›</span>
+      {/* Bouton Partager — entouré */}
+      <span className="install-tuto__safari-share">
+        <span className="install-tuto__safari-share-ring"/>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/>
+          <polyline points="16 6 12 2 8 6"/>
+          <line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+      </span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+      <span className="install-tuto__safari-icon" style={{ letterSpacing: 1 }}>···</span>
+    </div>
+  </div>
+);
 
 const InstallTutorialBubble = ({ onOpen, onDismiss }) => (
   <div style={{
@@ -154,9 +190,26 @@ const InstallTutorial = () => {
           </button>
         </div>
 
-        {/* Image de l'étape */}
+        {/* Visuel de l'étape : illustration custom OU image + highlight overlay */}
         <div className="install-tuto__img-wrap">
-          <img src={s.img} alt={s.alt} className="install-tuto__img"/>
+          {s.type === "illustration" ? (
+            <SafariToolbarIllustration/>
+          ) : (
+            <div className="install-tuto__img-inner" style={{ transform: s.zoom ? `scale(${s.zoom})` : undefined }}>
+              <img src={s.img} alt={s.alt} className="install-tuto__img"/>
+              {s.highlight && (
+                <span
+                  className={"install-tuto__hl install-tuto__hl--" + s.highlight.shape}
+                  style={{
+                    left: s.highlight.left + "%",
+                    top: s.highlight.top + "%",
+                    width: s.highlight.width + "%",
+                    height: s.highlight.height + "%",
+                  }}
+                />
+              )}
+            </div>
+          )}
         </div>
 
         {/* Texte de l'étape */}
