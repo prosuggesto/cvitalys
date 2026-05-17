@@ -324,13 +324,17 @@ const CVPreviewVisual = ({ cv, scale = 1, float3d = false }) => {
         {/* RIGHT main column */}
         <main style={{ padding: "18px 16px 14px", display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
           <header>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.005em" }}>
-              {u.firstName || '—'}<br/>{u.lastName || ''}
-            </div>
-            <div style={{ marginTop: 5, fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase", color: p.accent, fontWeight: 600 }}>
+            {(u.firstName || u.lastName) && (
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.005em" }}>
+                {u.firstName}{u.firstName && u.lastName ? <br/> : null}{u.lastName}
+              </div>
+            )}
+            <div style={{ marginTop: (u.firstName || u.lastName) ? 5 : 0, fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase", color: p.accent, fontWeight: 600 }}>
               {c.title}
             </div>
-            <div style={{ width: 22, height: 1, background: p.accent, marginTop: 6 }}/>
+            {(u.firstName || u.lastName) && (
+              <div style={{ width: 22, height: 1, background: p.accent, marginTop: 6 }}/>
+            )}
           </header>
 
           <section>
@@ -580,15 +584,11 @@ const AudioPlayerCustom = ({ src, knownDuration = 0, label, onPlay, onStop }) =>
         <button type="button" className="audio-play" onClick={toggle} style={{ width: 44, height: 44, flexShrink: 0 }}>
           {playing ? <I.Pause size={14}/> : <I.Play size={14}/>}
         </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="audio-bar" onClick={seek} style={{ cursor: 'pointer' }}>
-            <div className="audio-bar__progress" style={{ width: pct + '%' }}/>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-            <span className="audio-time">{fmt(currentTime)}</span>
-            <span className="audio-time">{fmt(duration)}</span>
-          </div>
+        <span className="audio-time" style={{ flexShrink: 0 }}>{fmt(currentTime)}</span>
+        <div className="audio-bar" onClick={seek} style={{ cursor: 'pointer', flex: 1 }}>
+          <div className="audio-bar__progress" style={{ width: pct + '%' }}/>
         </div>
+        <span className="audio-time" style={{ flexShrink: 0 }}>{fmt(duration)}</span>
       </div>
     </div>
   );

@@ -167,18 +167,14 @@ const PublicAudioPlayer = ({ audioUrl, shortCode }) => {
   return (
     <div style={{ padding: 18, background: "var(--surface-2)", borderRadius: 18, border: "1px solid var(--border-soft)" }}>
       <audio ref={audioRef} src={audioUrl} preload="metadata" style={{ display: 'none' }}/>
-      <div className="row gap-12">
-        <button className="audio-play" onClick={togglePlay} style={{ width: 44, height: 44 }}>
+      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("public.audioLabel")}</div>
+      <div className="row gap-12" style={{ alignItems: 'center' }}>
+        <button className="audio-play" onClick={togglePlay} style={{ width: 44, height: 44, flexShrink: 0 }}>
           {playing ? <I.Pause size={14} /> : <I.Play size={14} />}
         </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6, letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("public.audioLabel")}</div>
-          <div className="audio-bar"><div className="audio-bar__progress" style={{ width: pct + "%" }} /></div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-            <span className="audio-time">{fmt(currentTime)}</span>
-            <span className="audio-time">{fmt(duration)}</span>
-          </div>
-        </div>
+        <span className="audio-time" style={{ flexShrink: 0 }}>{fmt(currentTime)}</span>
+        <div className="audio-bar" style={{ flex: 1 }}><div className="audio-bar__progress" style={{ width: pct + "%" }} /></div>
+        <span className="audio-time" style={{ flexShrink: 0 }}>{fmt(duration)}</span>
       </div>
     </div>);
 };
@@ -201,18 +197,14 @@ const SimulatedAudioPlayer = ({ duration: durationStr = "1:08" }) => {
   const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   return (
     <div style={{ padding: 18, background: "var(--surface-2)", borderRadius: 18, border: "1px solid var(--border-soft)" }}>
-      <div className="row gap-12">
-        <button className="audio-play" onClick={() => setPlaying(!playing)} style={{ width: 44, height: 44 }}>
+      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10, letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("public.audioLabel")}</div>
+      <div className="row gap-12" style={{ alignItems: 'center' }}>
+        <button className="audio-play" onClick={() => setPlaying(!playing)} style={{ width: 44, height: 44, flexShrink: 0 }}>
           {playing ? <I.Pause size={14} /> : <I.Play size={14} />}
         </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6, letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("public.audioLabel")}</div>
-          <div className="audio-bar"><div className="audio-bar__progress" style={{ width: pct + "%" }} /></div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-            <span className="audio-time">{fmt(curSec)}</span>
-            <span className="audio-time">{durationStr}</span>
-          </div>
-        </div>
+        <span className="audio-time" style={{ flexShrink: 0 }}>{fmt(curSec)}</span>
+        <div className="audio-bar" style={{ flex: 1 }}><div className="audio-bar__progress" style={{ width: pct + "%" }} /></div>
+        <span className="audio-time" style={{ flexShrink: 0 }}>{durationStr}</span>
       </div>
     </div>);
 };
