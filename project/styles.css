@@ -492,17 +492,34 @@ input, textarea, select { font-family: inherit; color: inherit; }
 /* Override des fontSizes inline et des grid 2-col pour rentrer dans le viewport */
 @media (max-width: 720px) {
   /* Nav : padding réduit, brand plus petit, liens cachés (les sections sont accessibles via scroll) */
-  .landing-nav__inner { padding: 12px 16px; gap: 10px; }
-  .landing-nav__inner > div:first-of-type span { font-size: 16px; } /* CVitalis brand text */
+  .landing-nav__inner { padding: 10px 12px; gap: 6px; }
+  .landing-nav__inner > div:first-of-type span { font-size: 15px; } /* CVitalis brand text */
   .landing-nav__links { display: none; }
-  .landing-nav .btn--sm { padding: 7px 12px; font-size: 12px; }
+  .landing-nav .btn--sm { padding: 6px 10px; font-size: 11px; }
 
   /* Hero : titre + paragraphe rétrécis, padding réduit */
   .hero { padding: 24px 16px 36px; gap: 24px; }
-  .hero h1 { font-size: clamp(28px, 8.5vw, 40px); margin: 8px 0 14px; }
-  .hero p { font-size: 14px; margin: 0 0 22px; }
-  .hero__cta .btn { font-size: 14px; padding: 12px 18px; }
-  .hero__preview { padding: 18px; border-radius: 20px; }
+  .hero h1 { font-size: clamp(26px, 8vw, 38px); margin: 8px 0 14px; }
+  .hero p {
+    font-size: 14px;
+    margin: 0 0 22px;
+    /* Force le wrap propre — empêche les longs mots de déborder */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    max-width: 100%;
+  }
+  /* CTA buttons hero : plus compacts qu'avant */
+  .hero__cta .btn { font-size: 13px; padding: 10px 14px; }
+  .hero__cta .btn--lg { font-size: 13px !important; padding: 11px 16px !important; }
+  .hero__preview { padding: 16px; border-radius: 18px; }
+}
+
+/* Très petit écran (<=420px) : cacher le bouton 'Se connecter' pour
+   laisser la place au bouton primaire 'Créer mon CV' sans qu'il soit coupé */
+@media (max-width: 420px) {
+  .landing-nav .btn--ghost { display: none; }
+}
 
   /* Toutes les sections landing : padding latéral max 16px */
   #fonctionnement,
