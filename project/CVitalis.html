@@ -66,38 +66,23 @@
 <script type="text/babel" src="src/install-tutorial.jsx"></script>
 <script type="text/babel" src="src/app.jsx"></script>
 
-<!-- Service Worker registration — silent auto-update -->
+<!-- Service Worker registration
+     The SW caches the app shell so updates propagate on the NEXT launch
+     after a deploy — never mid-session, so typing into a form or browsing
+     a list is never interrupted by a forced reload. -->
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
       .then(function (reg) {
-        // Check for updates every time the page loads
+        // Check for a new sw.js in the background. If found, the browser
+        // installs it and keeps it in "waiting" until the current page is
+        // closed — then next launch picks up the new version.
         reg.update();
-
-        // When a new SW is waiting, activate it silently on next navigation
-        reg.addEventListener('updatefound', function () {
-          var newWorker = reg.installing;
-          newWorker.addEventListener('statechange', function () {
-            // New SW installed and waiting → tell it to skip waiting immediately
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              newWorker.postMessage('SKIP_WAITING');
-            }
-          });
-        });
       })
       .catch(function (err) {
         console.warn('[SW] Registration failed:', err);
       });
-
-    // When the SW activates a new version, reload all clients silently
-    var refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', function () {
-      if (!refreshing) {
-        refreshing = true;
-        window.location.reload();
-      }
-    });
   });
 }
 </script>

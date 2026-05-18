@@ -1,15 +1,19 @@
 // CVitalis Service Worker
 // Strategies:
-//   App shell (HTML, CSS, JSX) → stale-while-revalidate
-//     → cache served instantly, network fetch updates cache in background
-//     → user sees latest version on next reload, no manual action needed
+//   App shell (HTML, CSS, JSX) → cache-first → instant, predictable load
 //   Static assets (images, fonts, CDN scripts) → cache-first
 //   Supabase API → network-first with cache fallback (offline support)
 //
-// Auto-update: CACHE_VERSION is bumped on every Vercel build by
-// scripts/bump-sw-version.js → byte-different sw.js → browser detects new SW
-// → install + skipWaiting + clients.claim → controllerchange in the page
-// → silent reload. User never has to reinstall.
+// Auto-update flow:
+//   1. CACHE_VERSION is bumped on every Vercel build by
+//      scripts/bump-sw-version.js (uses git commit SHA).
+//   2. Browser fetches new sw.js (Vercel serves it no-cache).
+//   3. Different bytes → browser installs the new SW in the background
+//      and PRE-CACHES the new shell.
+//   4. New SW stays in "waiting" while the user is using the app.
+//   5. Next launch (PWA reopened from home screen) → new SW activates
+//      automatically → user sees the new version, no reload prompt,
+//      no mid-session interruption.
 
 const CACHE_VERSION = 'cvitalys-dev';
 
@@ -55,12 +59,15 @@ const CDN_HOSTS = ['unpkg.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fon
 const SUPABASE_HOST = 'supabase.co';
 
 // ─── Install: pre-cache everything, bypass HTTP cache for shell ──────────────
+// NOTE: we deliberately do NOT call self.skipWaiting() here. The new SW
+// stays in "waiting" state and only takes over once all clients (tabs/
+// the PWA window) are closed and the app is relaunched. This prevents
+// the page from being reloaded while the user is in the middle of typing
+// a login or browsing their CVs.
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_VERSION);
-      // Force network fetch (bypass HTTP cache) so we always cache the latest
-      // version of every shell file at install time.
       const shellRequests = SHELL.map((url) => new Request(url, { cache: 'reload' }));
       const staticRequests = STATIC_ASSETS.map((url) => new Request(url));
       await Promise.all(
@@ -70,18 +77,17 @@ self.addEventListener('install', (event) => {
             .catch(() => {})
         )
       );
-      self.skipWaiting();
     })()
   );
 });
 
-// ─── Activate: delete old caches, take control immediately ────────────────────
+// ─── Activate: delete old caches. Does NOT claim() current clients.
+// Same reasoning as above — the new SW takes over only on the next launch.
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
       await Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)));
-      await self.clients.claim();
     })()
   );
 });
@@ -99,14 +105,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin requests
+  // Same-origin: app shell + static assets all go cache-first.
+  // Updates land on next launch via the new SW (see install/activate above).
   if (url.origin === self.location.origin) {
-    // App shell (HTML, CSS, JSX, manifest) → stale-while-revalidate
-    if (isShellUrl(url.pathname)) {
-      event.respondWith(staleWhileRevalidate(request));
-      return;
-    }
-    // Static assets (images, fonts) → cache-first
     event.respondWith(cacheFirst(request));
     return;
   }
@@ -121,29 +122,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(fetch(request).catch(() => new Response('', { status: 503 })));
 });
 
-function isShellUrl(pathname) {
-  if (pathname === '/' || pathname === '/CVitalis.html') return true;
-  if (pathname === '/styles.css') return true;
-  if (pathname === '/manifest.webmanifest') return true;
-  if (pathname.startsWith('/src/') && pathname.endsWith('.jsx')) return true;
-  return false;
-}
-
 // ─── Strategies ───────────────────────────────────────────────────────────────
-
-// Stale-while-revalidate: serve cache, fetch fresh in background, update cache
-async function staleWhileRevalidate(request) {
-  const cache = await caches.open(CACHE_VERSION);
-  const cached = await cache.match(request);
-  const fetchPromise = fetch(request)
-    .then((response) => {
-      if (response.ok) cache.put(request, response.clone());
-      return response;
-    })
-    .catch(() => cached);
-  // Return cached immediately if available, else wait for network
-  return cached || fetchPromise;
-}
 
 // Cache-first: cache → network → 503
 async function cacheFirst(request) {

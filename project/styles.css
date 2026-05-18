@@ -228,18 +228,11 @@ input, textarea, select { font-family: inherit; color: inherit; }
   min-height: 68px; background: var(--surface); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 18px;
   position: sticky; top: 0; z-index: 50;
-  /* PWA standalone iOS: respect notch / status bar / home indicator.
-     content-box (default) so padding-top adds on top of min-height — otherwise
-     the avatar would overflow into the safe-area zone. */
+  /* PWA iOS: respect notch / status bar. Default content-box so padding-top
+     adds to min-height — otherwise the avatar (44px) would clip into the
+     safe-area zone. PWA breathing-room override lives at the END of this
+     file (after the mobile media queries) so it actually wins. */
   padding: env(safe-area-inset-top) max(24px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left));
-}
-/* In PWA standalone (no Safari URL bar above), add breathing room between
-   status bar and header content so it doesn't feel glued to the top. */
-@media (display-mode: standalone) {
-  .app-header {
-    padding-top: calc(env(safe-area-inset-top) + 10px);
-    padding-bottom: 6px;
-  }
 }
 .app-header__title {
   position: absolute; left: 50%; transform: translateX(-50%);
@@ -633,11 +626,6 @@ input, textarea, select { font-family: inherit; color: inherit; }
   padding: calc(16px + env(safe-area-inset-top)) max(32px, env(safe-area-inset-right)) 16px max(32px, env(safe-area-inset-left));
   display: flex; align-items: center; gap: 24px;
 }
-@media (display-mode: standalone) {
-  .landing-nav__inner {
-    padding-top: calc(env(safe-area-inset-top) + 22px);
-  }
-}
 .landing-nav__links { display: flex; gap: 26px; margin-left: 36px; }
 .landing-nav__links a { font-size: 14px; color: var(--ink-2); }
 .landing-nav__links a:hover { color: var(--ink); }
@@ -916,3 +904,28 @@ input, textarea, select { font-family: inherit; color: inherit; }
 [data-no-chrome] .app-header,
 [data-no-chrome] .drawer,
 [data-no-chrome] .drawer-backdrop { display: none; }
+
+/* ===== PWA standalone iOS — must come LAST so it overrides the mobile
+   media query above. In standalone there's no Safari URL bar to give
+   breathing room between the iOS status bar and the header content,
+   so we add explicit padding. */
+@media (display-mode: standalone) {
+  .app-header {
+    padding-top: calc(env(safe-area-inset-top) + 14px);
+    padding-bottom: 8px;
+  }
+  .landing-nav__inner {
+    padding-top: calc(env(safe-area-inset-top) + 22px);
+  }
+  .drawer {
+    padding-top: calc(env(safe-area-inset-top) + 22px);
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+  }
+}
+/* iOS Safari adds "standalone" via navigator.standalone (older API).
+   Match the legacy iPad/iPhone home-screen mode too. */
+@media (display-mode: fullscreen) {
+  .app-header { padding-top: calc(env(safe-area-inset-top) + 14px); padding-bottom: 8px; }
+  .landing-nav__inner { padding-top: calc(env(safe-area-inset-top) + 22px); }
+  .drawer { padding-top: calc(env(safe-area-inset-top) + 22px); padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+}
