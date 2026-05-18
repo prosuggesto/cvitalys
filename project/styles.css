@@ -686,6 +686,7 @@ input, textarea, select { font-family: inherit; color: inherit; }
 
 /* Se connecter reste visible sur mobile maintenant que LangSwitch est compact (juste FR/ES dropdown) */
 
+@media (max-width: 720px) {
   /* Toutes les sections landing : padding latéral max 16px */
   #fonctionnement,
   #valeur > div,
