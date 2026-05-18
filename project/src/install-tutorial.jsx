@@ -68,24 +68,18 @@ const TUTORIAL_STEPS = [
     body: "Dans Safari, appuyez sur l'icône Partager en haut à droite de la barre d'adresse (le carré avec la flèche vers le haut).",
     img: "assets/install-tutorial/step1.png",
     alt: "Safari ouvert sur CVitalis avec le bouton Partager en haut à droite",
-    // Bouton Partager dans la barre URL Safari, en haut à droite
-    highlight: { left: 84, top: 3.5, width: 13, height: 3.5, shape: "circle" },
   },
   {
     title: "Étape 2 — Toutes les actions",
     body: "Appuyez sur les trois petits points « Plus » pour afficher toutes les actions disponibles.",
     img: "assets/install-tutorial/step2.png",
     alt: "Menu Partager de Safari avec le bouton Plus",
-    // Bouton Plus : icône ••• + label 'Plus' (englober les deux)
-    highlight: { left: 70, top: 47, width: 26, height: 22, shape: "circle" },
   },
   {
     title: "Étape 3 — Ajouter CVitalis",
     body: "Appuyez sur « Sur l'écran d'accueil », puis validez en haut à droite. CVitalis apparaît alors sur votre écran d'accueil comme une vraie app.",
     img: "assets/install-tutorial/step3.png",
     alt: "Option Sur l'écran d'accueil",
-    // 'Sur l'écran d'accueil' = 1er item de la 2e section du menu étendu
-    highlight: { left: 3, top: 65, width: 80, height: 6, shape: "rect" },
   },
 ];
 
@@ -185,17 +179,6 @@ const InstallTutorial = () => {
         <div className="install-tuto__img-wrap">
           <div className="install-tuto__img-frame">
             <img src={s.img} alt={s.alt} className="install-tuto__img"/>
-            {s.highlight && (
-              <span
-                className={"install-tuto__hl install-tuto__hl--" + s.highlight.shape}
-                style={{
-                  left: s.highlight.left + "%",
-                  top: s.highlight.top + "%",
-                  width: s.highlight.width + "%",
-                  height: s.highlight.height + "%",
-                }}
-              />
-            )}
           </div>
         </div>
 
