@@ -905,6 +905,24 @@ input, textarea, select { font-family: inherit; color: inherit; }
 [data-no-chrome] .drawer,
 [data-no-chrome] .drawer-backdrop { display: none; }
 
+/* ===== Analytics filter bar — mobile 2-column grid layout =====
+   Mirrors the landing page mock analytics filters on mobile:
+   row 1 = [Period | Sector]
+   row 2 = [CV    | Filter button] */
+@media (max-width: 720px) {
+  .analytics-filters {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .analytics-filters > .select,
+  .analytics-filters > .btn {
+    max-width: none !important;
+    margin-left: 0 !important;
+    width: 100%;
+  }
+}
+
 /* ===== PWA standalone iOS — must come LAST so it overrides the mobile
    media query above. In standalone there's no Safari URL bar so we add
    explicit padding for the iOS notch / status bar / home indicator

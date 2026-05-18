@@ -1,12 +1,26 @@
 // Top-level app: hash router + auth state + Supabase session
 
-// PWA standalone detection — used to skip the landing page entirely
-// when launched from home screen (iOS standalone or Android display-mode: standalone)
+// PWA standalone detection — used to skip the landing page entirely when
+// launched from home screen. Conservative on iOS because `matchMedia
+// (display-mode: standalone)` has historically misfired on iOS Safari, so
+// we exclusively trust `navigator.standalone` there. On Android Chrome,
+// `navigator.standalone` doesn't exist so we fall back to matchMedia.
+// Query-string `?pwa=1` (set in manifest start_url) is also a positive
+// signal that we were launched from the PWA icon.
 const isPwaStandalone = () => {
   if (typeof window === "undefined") return false;
   try {
-    if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return true;
+    // Explicit query param from manifest start_url
+    const params = new URLSearchParams(window.location.search || "");
+    if (params.get("pwa") === "1") return true;
+    // iOS: navigator.standalone is the only reliable check
     if (window.navigator && window.navigator.standalone === true) return true;
+    // Non-iOS: trust matchMedia
+    const ua = (window.navigator && window.navigator.userAgent) || "";
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    if (!isIOS && window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) {
+      return true;
+    }
   } catch (_) {}
   return false;
 };

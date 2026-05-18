@@ -2,7 +2,7 @@
   "name": "CVitalis",
   "short_name": "CVitalis",
   "description": "Le CV digital qui se présente pour vous",
-  "start_url": "/",
+  "start_url": "/?pwa=1",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

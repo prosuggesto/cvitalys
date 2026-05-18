@@ -384,8 +384,11 @@ const Analytics = ({ cvs }) => {
         title={t("analytics.title")}
         subtitle={t("analytics.sub")} />
 
-      {/* Barre de filtres */}
-      <div className="card" style={{ padding: 18, marginBottom: 16, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+      {/* Barre de filtres
+          Desktop : flex en ligne (période | secteur | CV | bouton à droite)
+          Mobile  : grille 2 colonnes — ligne 1 (période, secteur), ligne 2
+                    (CV, bouton Filtrer) — voir styles.css .analytics-filters */}
+      <div className="card analytics-filters" style={{ padding: 18, marginBottom: 16, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
 
         {/* Sélecteur de période — désactivé si un CV est sélectionné */}
         <select

@@ -68,9 +68,12 @@ const EmptyCVCard = ({ onClick }) => {
     textAlign: "center", cursor: "pointer",
     minHeight: isMobile ? 380 : 540,
     gap: 14,
-    gridColumn: "1 / -1",
-    maxWidth: 340,
-    margin: "0 auto",
+    // Mobile: span full row, centered. Desktop: stay in its natural grid
+    // column (column 1 when alone, so it lands on the left like a normal
+    // card instead of stretching across the whole row.
+    gridColumn: isMobile ? "1 / -1" : "auto",
+    maxWidth: isMobile ? 340 : "none",
+    margin: isMobile ? "0 auto" : 0,
     width: "100%",
   }}>
     <div style={{ width: 56, height: 56, borderRadius: "50%", border: "1px dashed var(--border-strong)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" }}>

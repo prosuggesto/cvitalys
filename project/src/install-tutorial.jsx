@@ -19,8 +19,17 @@ const isAndroid = () => {
 
 const isStandalone = () => {
   try {
-    if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return true;
+    // ?pwa=1 query param from manifest start_url
+    const params = new URLSearchParams(window.location.search || "");
+    if (params.get("pwa") === "1") return true;
+    // iOS: navigator.standalone is the only reliable check
     if (window.navigator && window.navigator.standalone === true) return true;
+    // Non-iOS: trust matchMedia
+    const ua = (window.navigator && window.navigator.userAgent) || "";
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+    if (!isIOS && window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) {
+      return true;
+    }
   } catch (_) {}
   return false;
 };
