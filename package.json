@@ -1,0 +1,10 @@
+{
+  "name": "cvitalys",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/bump-sw-version.js"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}
