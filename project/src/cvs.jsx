@@ -66,11 +66,11 @@ const EmptyCVCard = ({ onClick }) => {
     padding: isMobile ? 16 : 30,
     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
     textAlign: "center", cursor: "pointer",
-    minHeight: isMobile ? 380 : 540,
+    minHeight: isMobile ? 460 : 540,
     gap: 14,
     maxWidth: isMobile ? 340 : "none",
-    margin: isMobile ? "0 auto" : undefined,
-    width: isMobile ? "100%" : undefined
+    width: isMobile ? "min(340px, 100%)" : undefined,
+    justifySelf: isMobile ? "center" : undefined,
   }}>
     <div style={{ width: 56, height: 56, borderRadius: "50%", border: "1px dashed var(--border-strong)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" }}>
       <I.Plus size={22}/>
