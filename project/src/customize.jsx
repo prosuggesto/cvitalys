@@ -261,12 +261,11 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
         } />
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.05fr) minmax(0, 1fr)", gap: isMobile ? 16 : 28, alignItems: "flex-start" }}>
-        {/* Colonne gauche : PDF + Audio
-            Desktop : sticky en haut (top 92) avec alignSelf:start pour que le
-            bloc démarre à la même hauteur que "Información del CV" à droite ;
-            ils scrollent ensemble jusqu'à ce que la gauche se colle au top
-            (même pattern que la section "Pourquoi CVitalis" de la landing). */}
-        <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 16 : 20, position: isMobile ? "static" : "sticky", top: 92, alignSelf: isMobile ? "auto" : "start" }}>
+        {/* Colonne gauche : PDF + Audio. Pas de sticky — alignItems flex-start
+            sur la grille suffit pour que CV/audio démarrent à la même hauteur
+            que "Información del CV" à droite, et les deux colonnes scrollent
+            normalement ensemble. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 16 : 20 }}>
 
           {/* Section CV */}
           <div className="card" style={{ padding: isMobile ? 18 : 32 }}>
