@@ -486,7 +486,7 @@ const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
         title={t("cvs.title")}
         subtitle={t("cvs.sub")}
       />
-      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))" }}>
+      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(360px, 100%), 1fr))" }}>
         {cvs.map((cv) => (
           <CVCard
             key={cv.id}
