@@ -1,28 +1,22 @@
-// InstallTutorial — popup expliquant aux users iOS comment ajouter
-// CVitalis à leur écran d'accueil (PWA install via Safari Share Sheet).
-//
-// Comportement :
-//  - Détecte iOS Safari (la seule combinaison qui permet "Sur l'écran d'accueil")
-//  - Ne s'affiche QUE si l'app n'est pas déjà installée (display-mode standalone)
-//  - Première ouverture après login → popup pleine taille 3 étapes
-//  - Après fermeture par l'X de la popup → bulle widget en bas à droite
-//  - X sur la bulle → fermeture définitive (flag localStorage)
+// InstallTutorial — iOS: plein écran 3 étapes + bulle minimisée
+//                  Android: banner PWA avec bouton beforeinstallprompt
 
-const TUTORIAL_KEY_DISMISSED  = "cvitalys.install.dismissed";
-const TUTORIAL_KEY_MINIMIZED  = "cvitalys.install.minimized";
+const TUTORIAL_KEY_DISMISSED = "cvitalys.install.dismissed";
+const TUTORIAL_KEY_MINIMIZED = "cvitalys.install.minimized";
 
-// Détection iOS (iPhone/iPad/iPod). On accepte iPadOS qui se déclare Mac mais
-// qui a Touch — sinon les iPads modernes seraient exclus.
 const isIOS = () => {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
   if (/iPhone|iPad|iPod/i.test(ua)) return true;
-  // iPadOS 13+ se présente comme Mac mais a Touch
   if (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return true;
   return false;
 };
 
-// L'app tourne déjà en mode standalone (déjà installée comme PWA) ?
+const isAndroid = () => {
+  if (typeof navigator === "undefined") return false;
+  return /android/i.test(navigator.userAgent || "");
+};
+
 const isStandalone = () => {
   try {
     if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return true;
@@ -31,35 +25,20 @@ const isStandalone = () => {
   return false;
 };
 
-// Force-show via URL hash : permet à un user de réouvrir le tutorial même
-// après l'avoir dismissed définitivement (utile pour le bouton manuel)
-const isForceShow = () => {
-  try {
-    return /(\?|#)install-help/i.test(window.location.href || "");
-  } catch (_) { return false; }
-};
+// Capturer l'événement beforeinstallprompt (Android) avant qu'il soit consommé
+let _deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  _deferredPrompt = e;
+});
 
-// Doit-on afficher le tutorial à cet user ?
 const shouldShowTutorial = () => {
-  if (isForceShow()) return true;            // override : always show
-  if (isStandalone()) return false;          // déjà installé en PWA
+  if (isStandalone()) return false;
   try {
     if (localStorage.getItem(TUTORIAL_KEY_DISMISSED) === "1") return false;
-  } catch (_) {
-    // localStorage non dispo (private mode?) → on continue, on montre
-  }
-  if (!isIOS()) return false;                // pour l'instant : iOS uniquement
-  return true;
-};
-
-// Reset complet des flags (utilisé par le bouton manuel)
-window.resetInstallTutorial = () => {
-  try {
-    localStorage.removeItem("cvitalys.install.dismissed");
-    localStorage.removeItem("cvitalys.install.minimized");
-    window.location.hash = "#install-help";
-    setTimeout(() => window.location.reload(), 50);
   } catch (_) {}
+  if (!isIOS() && !isAndroid()) return false;
+  return true;
 };
 
 const TUTORIAL_STEPS = [
@@ -109,19 +88,71 @@ const InstallTutorialBubble = ({ onOpen, onDismiss }) => (
   </div>
 );
 
-const InstallTutorial = () => {
-  const [open, setOpen] = useState(false);          // popup pleine taille visible ?
-  const [step, setStep] = useState(0);
-  const [bubble, setBubble] = useState(false);      // bulle widget visible ?
-  const [dismissed, setDismissed] = useState(false); // fermé définitivement
+const AndroidInstallBanner = ({ onDismiss }) => {
+  const [installing, setInstalling] = React.useState(false);
+  const [installed, setInstalled] = React.useState(false);
 
-  // Au mount : décider si on affiche
+  const handleInstall = async () => {
+    if (!_deferredPrompt) return;
+    setInstalling(true);
+    try {
+      _deferredPrompt.prompt();
+      const { outcome } = await _deferredPrompt.userChoice;
+      _deferredPrompt = null;
+      if (outcome === "accepted") {
+        setInstalled(true);
+        setTimeout(onDismiss, 1800);
+      }
+    } catch (_) {}
+    setInstalling(false);
+  };
+
+  return (
+    <div className="fullpage" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ maxWidth: 380, width: "100%", padding: "40px 24px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+        <div style={{ width: 64, height: 64, borderRadius: 18, background: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <I.Download size={28} style={{ color: "var(--gold-deep)" }}/>
+        </div>
+        <div>
+          <div className="eyebrow" style={{ color: "var(--gold-deep)", marginBottom: 8 }}>Installation</div>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 500, margin: "0 0 12px", lineHeight: 1.25, color: "var(--ink)" }}>
+            Accédez à CVitalis<br/>depuis votre écran d'accueil
+          </h2>
+          <p style={{ fontSize: 14, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
+            Pour pouvoir utiliser au mieux CVitalis et faciliter votre recherche, nous vous conseillons de l'installer sur votre écran d'accueil.
+          </p>
+        </div>
+        {installed ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--green)", fontWeight: 500, fontSize: 15 }}>
+            <I.Check size={18}/> Installé avec succès !
+          </div>
+        ) : (
+          <button
+            className="btn btn--primary"
+            style={{ width: "100%" }}
+            onClick={handleInstall}
+            disabled={!_deferredPrompt || installing}
+          >
+            {installing ? "Installation…" : <><I.Download size={15}/>&nbsp;Installer l'app</>}
+          </button>
+        )}
+        <button className="btn btn--ghost btn--sm" onClick={onDismiss}>Plus tard</button>
+      </div>
+    </div>
+  );
+};
+
+const InstallTutorial = () => {
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState(0);
+  const [bubble, setBubble] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
   useEffect(() => {
     if (!shouldShowTutorial()) {
       setDismissed(true);
       return;
     }
-    // Si l'user a déjà minimisé une fois → on affiche directement la bulle
     try {
       if (localStorage.getItem(TUTORIAL_KEY_MINIMIZED) === "1") {
         setBubble(true);
@@ -131,6 +162,21 @@ const InstallTutorial = () => {
     } catch (_) {
       setOpen(true);
     }
+  }, []);
+
+  // Exposer une fonction globale pour rouvrir depuis le menu burger sans reload
+  useEffect(() => {
+    window.openInstallTutorial = () => {
+      try {
+        localStorage.removeItem(TUTORIAL_KEY_DISMISSED);
+        localStorage.removeItem(TUTORIAL_KEY_MINIMIZED);
+      } catch (_) {}
+      setDismissed(false);
+      setOpen(true);
+      setBubble(false);
+      setStep(0);
+    };
+    return () => { delete window.openInstallTutorial; };
   }, []);
 
   const handleMinimize = () => {
@@ -151,7 +197,16 @@ const InstallTutorial = () => {
 
   if (dismissed) return null;
 
-  // Mode bulle uniquement
+  // Android
+  if (isAndroid() && !isStandalone()) {
+    if (bubble && !open) {
+      return <InstallTutorialBubble onOpen={handleReopen} onDismiss={handleDismissForever}/>;
+    }
+    if (!open) return null;
+    return <AndroidInstallBanner onDismiss={handleDismissForever}/>;
+  }
+
+  // Bulle minimisée (iOS)
   if (bubble && !open) {
     return <InstallTutorialBubble onOpen={handleReopen} onDismiss={handleDismissForever}/>;
   }
@@ -162,33 +217,34 @@ const InstallTutorial = () => {
   const isLast = step === TUTORIAL_STEPS.length - 1;
 
   return (
-    <div className="install-tuto__backdrop" onClick={handleMinimize}>
-      <div className="install-tuto__sheet" onClick={(e) => e.stopPropagation()}>
+    <div className="fullpage">
+      <button className="fullpage__close" onClick={handleMinimize} aria-label="Réduire">
+        <I.Close size={14}/>
+      </button>
+      <div className="fullpage__content" style={{
+        maxWidth: 420, margin: "0 auto", padding: "64px 18px 24px",
+        display: "flex", flexDirection: "column", minHeight: "100vh",
+      }}>
         {/* Header */}
-        <div className="install-tuto__header">
-          <div>
-            <div className="eyebrow" style={{ color: "var(--gold-deep)" }}>Installation</div>
-            <div className="install-tuto__title">Ajouter CVitalis à votre écran d'accueil</div>
-          </div>
-          <button className="install-tuto__close" onClick={handleMinimize} aria-label="Réduire">
-            <I.Close size={14}/>
-          </button>
+        <div style={{ marginBottom: 8 }}>
+          <div className="eyebrow" style={{ color: "var(--gold-deep)" }}>Installation</div>
+          <div className="install-tuto__title">Ajouter CVitalis à votre écran d'accueil</div>
         </div>
 
-        {/* Visuel : image + cadre lumineux positionné en % de l'image */}
-        <div className="install-tuto__img-wrap">
+        {/* Image */}
+        <div className="install-tuto__img-wrap" style={{ flex: 1 }}>
           <div className="install-tuto__img-frame">
             <img src={s.img} alt={s.alt} className="install-tuto__img"/>
           </div>
         </div>
 
-        {/* Texte de l'étape */}
+        {/* Texte */}
         <div className="install-tuto__body">
           <div className="install-tuto__step-title">{s.title}</div>
           <p className="install-tuto__step-body">{s.body}</p>
         </div>
 
-        {/* Indicateur de progression (dots) */}
+        {/* Dots */}
         <div className="install-tuto__dots">
           {TUTORIAL_STEPS.map((_, i) => (
             <span key={i} className={"install-tuto__dot" + (i === step ? " is-active" : "")}/>
