@@ -660,6 +660,8 @@ input, textarea, select { font-family: inherit; color: inherit; }
   .landing-nav__inner > div:first-of-type span { font-size: 15px; } /* CVitalis brand text */
   .landing-nav__links { display: none; }
   .landing-nav .btn--sm { padding: 6px 10px; font-size: 11px; }
+  /* Masque "Se connecter" sur mobile — trop de boutons, ça déborde à droite */
+  .landing-nav .btn--ghost { display: none; }
 
   /* Hero : titre + paragraphe rétrécis, padding réduit */
   .hero { padding: 24px 16px 36px; gap: 24px; }
