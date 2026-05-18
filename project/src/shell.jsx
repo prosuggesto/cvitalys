@@ -10,7 +10,7 @@ const NAV = [
 
 const Brand = ({ size = 22, withText = true }) => (
   <span className="brand" style={{ fontSize: size }}>
-    <img src="assets/logo.png" alt="CVitalis" style={{ width: size * 1.5, height: size * 1.5, objectFit: "contain", display: "block", flexShrink: 0 }}/>
+    <img src="assets/logo.png" alt="CVitalis" style={{ width: size * 1.5, height: size * 1.5, objectFit: "contain", display: "block", flexShrink: 0, mixBlendMode: "multiply" }}/>
     {withText && <span>CVitalis</span>}
   </span>
 );
