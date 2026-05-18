@@ -107,8 +107,30 @@ function AppInner() {
       }
     });
 
+    // Retour en ligne → refresh silencieux des CVs (stale-while-revalidate)
+    const handleOnline = () => {
+      api.getSession().then((s) => {
+        if (s) api.getCvs(s.user.id).then((data) => setCvs(data)).catch(() => {});
+      });
+    };
+    window.addEventListener('online', handleOnline);
+
+    // Message du Service Worker (ex: FLUSH_OFFLINE_QUEUE après retour réseau)
+    const handleSwMessage = (e) => {
+      if (e.data && e.data.type === 'FLUSH_OFFLINE_QUEUE') {
+        handleOnline();
+      }
+    };
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', handleSwMessage);
+    }
+
     return () => {
       if (listener && listener.subscription) listener.subscription.unsubscribe();
+      window.removeEventListener('online', handleOnline);
+      if (navigator.serviceWorker) {
+        navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+      }
     };
   }, []);
 
