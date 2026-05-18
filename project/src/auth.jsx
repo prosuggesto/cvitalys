@@ -90,7 +90,7 @@ const Login = ({ navigate }) => {
 
 const Signup = ({ navigate }) => {
   const { t } = useT();
-  const [f, setF] = useState({ firstName: "", lastName: "", email: "", password: "", phone: "" });
+  const [f, setF] = useState({ firstName: "", lastName: "", email: "", password: "", phone: "", lang: "fr" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [emailSent, setEmailSent] = useState(false);
@@ -101,7 +101,7 @@ const Signup = ({ navigate }) => {
     if (!f.firstName || !f.lastName) { setError("Prénom et nom sont requis."); return; }
     if (f.password.length < 6) { setError("Le mot de passe doit contenir au moins 6 caractères."); return; }
     setLoading(true);
-    api.signUp(f.email, f.password, f.firstName, f.lastName, f.phone)
+    api.signUp(f.email, f.password, f.firstName, f.lastName, f.phone, f.lang)
       .then(({ data, error: err }) => {
         setLoading(false);
         if (err) {
@@ -160,6 +160,12 @@ const Signup = ({ navigate }) => {
         <Field label={t("common.email")}><input className="input" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="votre@email.fr" required/></Field>
         <Field label={t("common.phone")}><input className="input" type="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="06 12 34 56 78"/></Field>
         <Field label={t("auth.password")} hint={t("auth.pwHint")}><input className="input" type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} required/></Field>
+        <Field label={t("common.langLabel")}>
+          <select className="select" value={f.lang} onChange={(e) => setF({ ...f, lang: e.target.value })}>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+          </select>
+        </Field>
         <AuthError message={error}/>
         <button className="btn btn--primary btn--lg" type="submit" disabled={loading}>
           {loading ? "Création du compte…" : t("auth.submitSignup")}

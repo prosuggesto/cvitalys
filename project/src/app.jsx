@@ -31,7 +31,7 @@ function AppInner() {
   const [loading, setLoading] = useState(true);
   const [cvs, setCvs] = useState([]);
   const { Toast: T, show: toast } = useToast();
-  const { t } = useT();
+  const { t, setLang } = useT();
 
   // Charger le profil et les CVs après authentification
   // Si le profil n'existe pas encore (trigger non installé), on le crée ici
@@ -47,11 +47,13 @@ function AppInner() {
             nom: meta.nom || '',
             email: user.email || '',
             telephone: meta.telephone || null,
+            langue_interface: meta.langue_interface || 'fr',
           }, { onConflict: 'id' }).then(() => api.getProfile(userId));
         });
       })
       .then((p) => {
         setProfile(p);
+        if (p.langue_interface) setLang(p.langue_interface);
         window.MOCK.initialUser = {
           firstName: p.prenom || '',
           lastName: p.nom || '',

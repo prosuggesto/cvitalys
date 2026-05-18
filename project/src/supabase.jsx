@@ -72,12 +72,12 @@ const api = {
 
   // ---- AUTH ----------------------------------------------------------------
 
-  signUp(email, password, prenom, nom, telephone) {
+  signUp(email, password, prenom, nom, telephone, langue_interface = 'fr') {
     return sb.auth.signUp({
       email,
       password,
       options: {
-        data: { prenom, nom, telephone: telephone || '' },
+        data: { prenom, nom, telephone: telephone || '', langue_interface },
       },
     });
   },
