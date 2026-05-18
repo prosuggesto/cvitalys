@@ -96,32 +96,46 @@ function AppInner() {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Vérifier la session initiale
     api.getSession().then((s) => {
+      if (!mounted) return;
       setSession(s);
       if (s) {
-        loadUserData(s.user.id).then(() => setLoading(false));
+        loadUserData(s.user.id).then(() => { if (mounted) setLoading(false); });
       } else {
         setLoading(false);
       }
     });
 
-    // Écouter les changements d'auth
+    // Écouter les changements d'auth (login, logout, token refresh)
     const { data: listener } = api.onAuthChange((event, s) => {
+      if (!mounted) return;
       setSession(s);
-      if (s) {
+      // Sur SIGNED_IN (login via le formulaire), on garde l'écran de
+      // chargement visible jusqu'à ce que profil + CVs soient chargés
+      // → pas de rendu intermédiaire chaotique (avatar vide, CVs qui
+      // apparaissent un par un dans le désordre, etc.)
+      if (event === 'SIGNED_IN' && s) {
+        setLoading(true);
+        loadUserData(s.user.id).then(() => { if (mounted) setLoading(false); });
+      } else if (event === 'TOKEN_REFRESHED' && s) {
+        // Refresh silencieux des données en background, pas de loading screen
         loadUserData(s.user.id);
-      } else {
+      } else if (event === 'SIGNED_OUT' || !s) {
         setProfile(null);
         setCvs([]);
         window.MOCK.initialUser = { firstName: '', lastName: '', email: '', phone: '', plan: 'Pro', renewalDate: '' };
+        setLoading(false);
       }
     });
 
-    // Retour en ligne → refresh silencieux des CVs (stale-while-revalidate)
+    // Retour en ligne → refresh silencieux des CVs (stats à jour à chaque
+    // reconnexion réseau, sans interrompre l'utilisateur)
     const handleOnline = () => {
       api.getSession().then((s) => {
-        if (s) api.getCvs(s.user.id).then((data) => setCvs(data)).catch(() => {});
+        if (s && mounted) api.getCvs(s.user.id).then((data) => mounted && setCvs(data)).catch(() => {});
       });
     };
     window.addEventListener('online', handleOnline);
@@ -137,6 +151,7 @@ function AppInner() {
     }
 
     return () => {
+      mounted = false;
       if (listener && listener.subscription) listener.subscription.unsubscribe();
       window.removeEventListener('online', handleOnline);
       if (navigator.serviceWorker) {

@@ -66,25 +66,47 @@
 <script type="text/babel" src="src/install-tutorial.jsx"></script>
 <script type="text/babel" src="src/app.jsx"></script>
 
-<!-- Service Worker registration
-     The SW caches the app shell so updates propagate on the NEXT launch
-     after a deploy — never mid-session, so typing into a form or browsing
-     a list is never interrupted by a forced reload. -->
+<!-- Service Worker registration with interaction-gated silent update.
+     Goal: every PWA launch, check for a new deploy and apply it without
+     interrupting the user.
+       1. Page loads → SW.register + reg.update() → browser checks
+          for a new sw.js (Vercel serves it no-cache, so it's always fresh).
+       2. If new sw.js, browser installs it in background. New SW calls
+          skipWaiting + clients.claim → activates immediately.
+       3. controllerchange fires on the page.
+       4. If the user hasn't touched/typed yet (still on loading screen
+          or just opened the app) → reload silently. They see slightly
+          longer loading, then the new version.
+       5. If the user already interacted → DON'T reload. The new files
+          are in cache and will be served on the next natural launch. -->
 <script>
-if ('serviceWorker' in navigator) {
+(function () {
+  if (!('serviceWorker' in navigator)) return;
+  var userInteracted = false;
+  function markInteracted() { userInteracted = true; }
+  // First user interaction disables the silent reload gate
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (evt) {
+    window.addEventListener(evt, markInteracted, { once: true, capture: true, passive: true });
+  });
+
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
-      .then(function (reg) {
-        // Check for a new sw.js in the background. If found, the browser
-        // installs it and keeps it in "waiting" until the current page is
-        // closed — then next launch picks up the new version.
-        reg.update();
-      })
-      .catch(function (err) {
-        console.warn('[SW] Registration failed:', err);
-      });
+      .then(function (reg) { reg.update(); })
+      .catch(function (err) { console.warn('[SW] Registration failed:', err); });
+
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (refreshing) return;
+      // Only reload if the user hasn't started interacting yet — this
+      // way the update is invisible (happens during loading screen).
+      // Otherwise, the new version waits until next launch.
+      if (!userInteracted) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
   });
-}
+})();
 </script>
 </body>
 </html>

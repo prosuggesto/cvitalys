@@ -437,7 +437,7 @@ const PublicPage = ({ shortCode, navigate }) => {
   return (
     <div data-no-chrome style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
       {/* Header — Brand + badge taille mesurée, rapprochés via max-width centré */}
-      <header style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+      <header className="public-header" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
         <div style={{
           width: '100%', maxWidth: 1100, padding: '22px 44px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',

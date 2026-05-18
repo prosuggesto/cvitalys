@@ -59,11 +59,11 @@ const CDN_HOSTS = ['unpkg.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fon
 const SUPABASE_HOST = 'supabase.co';
 
 // ─── Install: pre-cache everything, bypass HTTP cache for shell ──────────────
-// NOTE: we deliberately do NOT call self.skipWaiting() here. The new SW
-// stays in "waiting" state and only takes over once all clients (tabs/
-// the PWA window) are closed and the app is relaunched. This prevents
-// the page from being reloaded while the user is in the middle of typing
-// a login or browsing their CVs.
+// skipWaiting() is called so the new SW activates as soon as it's installed,
+// without waiting for all clients to close. The page-side reload that picks
+// up the new code is GATED by user interaction (see CVitalis.html): if the
+// user hasn't tapped/typed anything yet, the page reloads silently during
+// the loading screen; otherwise the new version waits for the next launch.
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
@@ -77,17 +77,20 @@ self.addEventListener('install', (event) => {
             .catch(() => {})
         )
       );
+      self.skipWaiting();
     })()
   );
 });
 
-// ─── Activate: delete old caches. Does NOT claim() current clients.
-// Same reasoning as above — the new SW takes over only on the next launch.
+// ─── Activate: delete old caches + claim clients so future fetches go
+// through the new SW (current page keeps its old in-memory JS until the
+// page-side reload gate fires — or until the next launch).
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
       await Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)));
+      await self.clients.claim();
     })()
   );
 });
