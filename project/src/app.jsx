@@ -44,55 +44,69 @@ function AppInner() {
   const { Toast: T, show: toast } = useToast();
   const { t, setLang } = useT();
 
-  // Charger le profil et les CVs après authentification
-  // Si le profil n'existe pas encore (trigger non installé), on le crée ici
-  const loadUserData = (userId) => {
-    return api.getProfile(userId)
-      .catch(() => {
-        // Profil absent → on le crée (fallback si le trigger DB n'est pas installé)
-        return sb.auth.getUser().then(({ data: { user } }) => {
-          const meta = user.user_metadata || {};
-          return sb.from('profils').upsert({
-            id: userId,
-            prenom: meta.prenom || '',
-            nom: meta.nom || '',
-            email: user.email || '',
-            telephone: meta.telephone || null,
-            langue_interface: meta.langue_interface || 'fr',
-          }, { onConflict: 'id' }).then(() => api.getProfile(userId));
-        });
-      })
-      .then((p) => {
-        // Sync langue_interface from auth metadata — DB trigger may not set it
-        return sb.auth.getUser().then(({ data: { user } }) => {
-          const metaLang = ((user && user.user_metadata) || {}).langue_interface;
-          if (metaLang && metaLang !== p.langue_interface) {
-            return api.updateProfile(userId, { langue_interface: metaLang })
-              .then(() => ({ ...p, langue_interface: metaLang }))
-              .catch(() => p);
-          }
-          return p;
-        }).catch(() => p);
-      })
-      .then((p) => {
-        setProfile(p);
-        if (p.langue_interface) setLang(p.langue_interface);
-        window.MOCK.initialUser = {
-          firstName: p.prenom || '',
-          lastName: p.nom || '',
-          email: p.email || '',
-          phone: p.telephone || '',
-          plan: 'Pro',
-          renewalDate: '',
-        };
-        return api.getCvs(userId);
-      })
-      .then((data) => {
-        setCvs(data);
-      })
-      .catch((err) => {
-        if (window.logErr) window.logErr("Erreur chargement données utilisateur:", err);
-      });
+  // Expose loading state to the SW registration script (in CVitalis.html).
+  // The SW only triggers a silent reload while this flag is true, so updates
+  // apply during the loading screen and never interrupt the user.
+  useEffect(() => {
+    window.__cvitalysLoading = loading;
+  }, [loading]);
+
+  // Charger le profil et les CVs après authentification.
+  // Implémenté en async/await pour pouvoir poser TOUS les setStates dans le
+  // même tick à la fin (batched render) — sinon React peut commit un état
+  // intermédiaire (avatar vide / CVs vides) entre setProfile et setCvs, ce
+  // qui donne le rendu "chaotique" qu'on cherche à éviter.
+  // Retourne une promesse qui résout quand profil + CVs sont prêts ET déjà
+  // posés dans le state ; l'appelant n'a plus qu'à setLoading(false).
+  const loadUserData = async (userId) => {
+    try {
+      // 1. Récupérer le profil (créer s'il n'existe pas)
+      let profile;
+      try {
+        profile = await api.getProfile(userId);
+      } catch (_) {
+        // Profil absent → le créer (fallback si le trigger DB n'est pas installé)
+        const { data: { user } } = await sb.auth.getUser();
+        const meta = (user && user.user_metadata) || {};
+        await sb.from('profils').upsert({
+          id: userId,
+          prenom: meta.prenom || '',
+          nom: meta.nom || '',
+          email: user.email || '',
+          telephone: meta.telephone || null,
+          langue_interface: meta.langue_interface || 'fr',
+        }, { onConflict: 'id' });
+        profile = await api.getProfile(userId);
+      }
+
+      // 2. Sync langue_interface depuis les metadata auth si nécessaire
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        const metaLang = ((user && user.user_metadata) || {}).langue_interface;
+        if (metaLang && metaLang !== profile.langue_interface) {
+          await api.updateProfile(userId, { langue_interface: metaLang });
+          profile = { ...profile, langue_interface: metaLang };
+        }
+      } catch (_) { /* non bloquant */ }
+
+      // 3. Récupérer les CVs
+      const cvData = await api.getCvs(userId);
+
+      // 4. Pose TOUS les setStates en une seule fois → un seul render
+      setProfile(profile);
+      setCvs(cvData);
+      if (profile.langue_interface) setLang(profile.langue_interface);
+      window.MOCK.initialUser = {
+        firstName: profile.prenom || '',
+        lastName: profile.nom || '',
+        email: profile.email || '',
+        phone: profile.telephone || '',
+        plan: 'Pro',
+        renewalDate: '',
+      };
+    } catch (err) {
+      if (window.logErr) window.logErr("Erreur chargement données utilisateur:", err);
+    }
   };
 
   useEffect(() => {

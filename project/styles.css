@@ -929,18 +929,16 @@ input, textarea, select { font-family: inherit; color: inherit; }
     padding-bottom: calc(22px + env(safe-area-inset-bottom));
   }
 
-  /* Centered modals (Crear un CV, Présenter au recruteur, etc.) — push the
-     modal away from the notch and home indicator. The .modal itself stays
-     centered but the backdrop reserves the safe-area space. */
+  /* Centered modals (Crear un CV, Voir el CV, etc.) — the backdrop
+     reserves the safe-area space so the modal sits below the notch.
+     The .modal__close is NOT offset here because it's positioned
+     absolute INSIDE the modal — moving it would push it onto the
+     title text instead of the modal corner. */
   .modal-backdrop {
     padding-top: calc(24px + env(safe-area-inset-top));
     padding-bottom: calc(24px + env(safe-area-inset-bottom));
     padding-left: max(24px, env(safe-area-inset-left));
     padding-right: max(24px, env(safe-area-inset-right));
-  }
-  .modal__close {
-    top: calc(18px + env(safe-area-inset-top));
-    right: max(18px, env(safe-area-inset-right));
   }
 
   /* Fullpage overlays (install tutorial, customize page, etc.) */

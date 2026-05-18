@@ -343,32 +343,40 @@ const AddCVModal = ({ open, onClose, onCreate, session }) => {
       ? Promise.resolve(f.sector.id)
       : f.sector.nom.trim() ? api.getOrCreateSecteur(userId, f.sector.nom) : Promise.resolve(null);
 
+    // FLOW: resolve poste/secteur → INSERT the CV row in DB → IMMEDIATELY
+    // redirect to /app/customize/:id with a CV object that has local blob
+    // URLs for the file + audio. Uploads happen in the background; the
+    // parent (MesCV) swaps the blob URLs for the real Supabase URLs once
+    // each upload completes, or shows a toast on failure.
     Promise.all([resolvePoste, resolveSecteur])
-      .then(([posteId, secteurId]) => api.createCv(userId, { nom_cv: f.name, poste_id: posteId, secteur_id: secteurId, langue: f.langue }))
+      .then(([posteId, secteurId]) =>
+        api.createCv(userId, { nom_cv: f.name, poste_id: posteId, secteur_id: secteurId, langue: f.langue })
+      )
       .then((newCv) => {
-        const final = { ...newCv };
-        // Upload image (BLOQUANT — partie structurante du CV).
-        const fileUpload = f.file
-          ? imageToWebP(f.file)
-              .then((webp) => api.uploadCvFile(userId, final.dbId, webp))
-              .then((url) => { final.cv_url = url; final.hasFile = true; })
-          : Promise.resolve();
-        return fileUpload.then(() => {
-          // Upload audio FIRE-AND-FORGET — on ne l'attend PAS avant de naviguer.
-          // Sur iOS Safari l'upload audio peut hang/être lent et bloquer la
-          // redirection. L'audio termine en arrière-plan ; si fail, l'user
-          // pourra ré-enregistrer depuis la page de personnalisation.
-          if (f.audioBlob) {
-            api.uploadAudio(userId, final.dbId, f.audioBlob)
-              .catch((e) => {
-                if (window.logErr) window.logErr("[CV create] audio upload failed:", e && e.message);
-              });
-          }
-          return final;
+        // Build the optimistic CV with local blob URLs so the customize
+        // page renders the image and audio instantly without waiting for
+        // any upload.
+        const optimistic = { ...newCv };
+        if (f.file) {
+          optimistic.cv_url = URL.createObjectURL(f.file);
+          optimistic.hasFile = true;
+        }
+        if (f.audioBlob) {
+          optimistic.audio_url = URL.createObjectURL(f.audioBlob);
+          optimistic.hasAudio = true;
+        }
+        setSaving(false);
+        onCreate({
+          cv: optimistic,
+          pendingFile: f.file,
+          pendingAudio: f.audioBlob,
+          userId,
         });
       })
-      .then((newCv) => { setSaving(false); onCreate(newCv); })
-      .catch((err) => { setSaving(false); setError(err.message || "Une erreur est survenue lors de la création du CV."); });
+      .catch((err) => {
+        setSaving(false);
+        setError(err.message || "Une erreur est survenue lors de la création du CV.");
+      });
   };
 
   if (!open) return null;
@@ -511,12 +519,39 @@ const MesCV = ({ cvs, setCvs, session, navigate, toast }) => {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         session={session}
-        onCreate={(newCv) => {
-          setCvs([...cvs, newCv]);
+        onCreate={({ cv, pendingFile, pendingAudio, userId }) => {
+          // 1. Optimistic UI : on injecte le CV avec blob URLs locaux dans le
+          //    state, on ferme le modal et on redirige immédiatement.
+          setCvs([...cvs, cv]);
           setAddOpen(false);
           toast(t("cvs.created"));
-          // Redirige directement vers Personnalisation avec CV + audio déjà chargés
-          navigate(`/app/customize/${newCv.id}`);
+          navigate(`/app/customize/${cv.id}`);
+
+          // 2. Upload image en background. On garde le blob URL local affiché
+          //    pendant l'upload ; quand l'upload réussit on remplace par l'URL
+          //    Supabase pour que les prochains chargements (rouvrir l'app) aient
+          //    la vraie source. Toast d'erreur si échec.
+          if (pendingFile) {
+            imageToWebP(pendingFile)
+              .then((webp) => api.uploadCvFile(userId, cv.dbId, webp))
+              .then((url) => {
+                setCvs((prev) => prev.map((c) => c.id === cv.id ? { ...c, cv_url: url } : c));
+              })
+              .catch((e) => {
+                toast("Erreur upload CV : " + (e && e.message ? e.message : "réessayez depuis personnalisation"));
+              });
+          }
+
+          // 3. Upload audio en background, même logique.
+          if (pendingAudio) {
+            api.uploadAudio(userId, cv.dbId, pendingAudio)
+              .then((url) => {
+                setCvs((prev) => prev.map((c) => c.id === cv.id ? { ...c, audio_url: url } : c));
+              })
+              .catch((e) => {
+                toast("Erreur upload audio : " + (e && e.message ? e.message : "réessayez depuis personnalisation"));
+              });
+          }
         }}
       />
       <QRDownloadModal

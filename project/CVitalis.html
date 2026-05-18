@@ -66,28 +66,18 @@
 <script type="text/babel" src="src/install-tutorial.jsx"></script>
 <script type="text/babel" src="src/app.jsx"></script>
 
-<!-- Service Worker registration with interaction-gated silent update.
-     Goal: every PWA launch, check for a new deploy and apply it without
-     interrupting the user.
-       1. Page loads → SW.register + reg.update() → browser checks
-          for a new sw.js (Vercel serves it no-cache, so it's always fresh).
-       2. If new sw.js, browser installs it in background. New SW calls
-          skipWaiting + clients.claim → activates immediately.
-       3. controllerchange fires on the page.
-       4. If the user hasn't touched/typed yet (still on loading screen
-          or just opened the app) → reload silently. They see slightly
-          longer loading, then the new version.
-       5. If the user already interacted → DON'T reload. The new files
-          are in cache and will be served on the next natural launch. -->
+<!-- Service Worker registration — silent updates gated on the loading screen.
+     React sets window.__cvitalysLoading = true while the LoadingScreen
+     is on screen. We only reload when that flag is true → the reload
+     happens during the loading screen and is invisible to the user. If
+     the SW update arrives after the user is in the app, the new files
+     stay cached and apply on the next launch — no mid-session disruption. -->
 <script>
+// Set the flag synchronously so the gate works even before React mounts.
+window.__cvitalysLoading = true;
+
 (function () {
   if (!('serviceWorker' in navigator)) return;
-  var userInteracted = false;
-  function markInteracted() { userInteracted = true; }
-  // First user interaction disables the silent reload gate
-  ['pointerdown', 'keydown', 'touchstart'].forEach(function (evt) {
-    window.addEventListener(evt, markInteracted, { once: true, capture: true, passive: true });
-  });
 
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
@@ -97,10 +87,9 @@
     var refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (refreshing) return;
-      // Only reload if the user hasn't started interacting yet — this
-      // way the update is invisible (happens during loading screen).
-      // Otherwise, the new version waits until next launch.
-      if (!userInteracted) {
+      // Reload only if the LoadingScreen is still showing (React updates
+      // the flag when it hides the screen). Otherwise, defer to next launch.
+      if (window.__cvitalysLoading === true) {
         refreshing = true;
         window.location.reload();
       }

@@ -51,16 +51,19 @@ const Login = ({ navigate }) => {
     setLoading(true);
     api.signIn(email, password)
       .then(({ error: err }) => {
-        setLoading(false);
         if (err) {
+          setLoading(false);
           if (err.message && err.message.toLowerCase().includes("invalid")) {
             setError("Email ou mot de passe incorrect. Vérifiez vos identifiants.");
           } else {
             setError(err.message || "Une erreur est survenue. Réessayez.");
           }
-        } else {
-          navigate("/app/cvs");
         }
+        // On success: do NOT navigate here. The auth listener in app.jsx
+        // fires SIGNED_IN → flips global loading=true → loads profile+CVs
+        // → redirects to /app/cvs from the route guard. Manually navigating
+        // here used to cause a bounce login → /app/cvs → /auth/login →
+        // /app/cvs because the session state wasn't yet in React.
       });
   };
 
@@ -111,8 +114,10 @@ const Signup = ({ navigate }) => {
             setError(err.message || "Une erreur est survenue. Réessayez.");
           }
         } else if (data.session) {
-          // Email confirmation désactivée → session immédiate
-          navigate("/app/cvs");
+          // Email confirmation désactivée → session immédiate.
+          // Pas de navigate ici : l'auth listener de app.jsx fire SIGNED_IN,
+          // affiche le LoadingScreen pendant le chargement profil+CVs, puis
+          // redirige vers /app/cvs automatiquement.
         } else {
           // Email confirmation activée → afficher message
           setEmailSent(true);
