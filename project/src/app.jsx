@@ -52,6 +52,18 @@ function AppInner() {
         });
       })
       .then((p) => {
+        // Sync langue_interface from auth metadata — DB trigger may not set it
+        return sb.auth.getUser().then(({ data: { user } }) => {
+          const metaLang = ((user && user.user_metadata) || {}).langue_interface;
+          if (metaLang && metaLang !== p.langue_interface) {
+            return api.updateProfile(userId, { langue_interface: metaLang })
+              .then(() => ({ ...p, langue_interface: metaLang }))
+              .catch(() => p);
+          }
+          return p;
+        }).catch(() => p);
+      })
+      .then((p) => {
         setProfile(p);
         if (p.langue_interface) setLang(p.langue_interface);
         window.MOCK.initialUser = {

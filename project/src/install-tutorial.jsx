@@ -153,15 +153,7 @@ const InstallTutorial = () => {
       setDismissed(true);
       return;
     }
-    try {
-      if (localStorage.getItem(TUTORIAL_KEY_MINIMIZED) === "1") {
-        setBubble(true);
-      } else {
-        setOpen(true);
-      }
-    } catch (_) {
-      setOpen(true);
-    }
+    setOpen(true);
   }, []);
 
   // Exposer une fonction globale pour rouvrir depuis le menu burger sans reload
@@ -182,7 +174,6 @@ const InstallTutorial = () => {
   const handleMinimize = () => {
     setOpen(false);
     setBubble(true);
-    try { localStorage.setItem(TUTORIAL_KEY_MINIMIZED, "1"); } catch (_) {}
   };
   const handleReopen = () => { setOpen(true); setBubble(false); };
   const handleDismissForever = () => {
