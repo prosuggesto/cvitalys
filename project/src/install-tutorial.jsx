@@ -68,16 +68,16 @@ const TUTORIAL_STEPS = [
     body: "Dans Safari, appuyez sur l'icône Partager en haut à droite de la barre d'adresse (le carré avec la flèche vers le haut).",
     img: "assets/install-tutorial/step1.png",
     alt: "Safari ouvert sur CVitalis avec le bouton Partager en haut à droite",
-    // Bouton Partager en haut à droite de la barre URL Safari
-    highlight: { left: 84, top: 7.5, width: 13, height: 4, shape: "circle" },
+    // Bouton Partager dans la barre URL Safari, en haut à droite
+    highlight: { left: 84, top: 3.5, width: 13, height: 3.5, shape: "circle" },
   },
   {
     title: "Étape 2 — Toutes les actions",
     body: "Appuyez sur les trois petits points « Plus » pour afficher toutes les actions disponibles.",
     img: "assets/install-tutorial/step2.png",
     alt: "Menu Partager de Safari avec le bouton Plus",
-    // Bouton Plus = 4e icône de la 2e rangée du share sheet
-    highlight: { left: 74, top: 45, width: 20, height: 18, shape: "circle" },
+    // Bouton Plus : icône ••• + label 'Plus' (englober les deux)
+    highlight: { left: 70, top: 47, width: 26, height: 22, shape: "circle" },
   },
   {
     title: "Étape 3 — Ajouter CVitalis",
@@ -85,7 +85,7 @@ const TUTORIAL_STEPS = [
     img: "assets/install-tutorial/step3.png",
     alt: "Option Sur l'écran d'accueil",
     // 'Sur l'écran d'accueil' = 1er item de la 2e section du menu étendu
-    highlight: { left: 3, top: 55, width: 80, height: 6, shape: "rect" },
+    highlight: { left: 3, top: 65, width: 80, height: 6, shape: "rect" },
   },
 ];
 
