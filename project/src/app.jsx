@@ -1,5 +1,16 @@
 // Top-level app: hash router + auth state + Supabase session
 
+// PWA standalone detection — used to skip the landing page entirely
+// when launched from home screen (iOS standalone or Android display-mode: standalone)
+const isPwaStandalone = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return true;
+    if (window.navigator && window.navigator.standalone === true) return true;
+  } catch (_) {}
+  return false;
+};
+
 function useHashRoute() {
   const get = () => window.location.hash.replace(/^#/, "") || "/";
   const [route, setRoute] = useState(get());
@@ -151,6 +162,13 @@ function AppInner() {
 
   // Écran de chargement pendant l'init
   if (loading) return <LoadingScreen/>;
+
+  // PWA standalone : jamais de landing page → connecté direct sur /app/cvs,
+  // sinon direct sur /auth/login (l'utilisateur peut aller à /auth/signup depuis là)
+  if (isPwaStandalone() && (route === "/" || route === "")) {
+    navigate(session ? "/app/cvs" : "/auth/login");
+    return null;
+  }
 
   // Si session active et sur une page auth → rediriger vers l'app
   if (session && isAuthRoute) {

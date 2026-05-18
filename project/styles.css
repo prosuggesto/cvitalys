@@ -225,9 +225,12 @@ input, textarea, select { font-family: inherit; color: inherit; }
 
 /* ---------- Header ---------- */
 .app-header {
-  height: 68px; background: var(--surface); border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; padding: 0 24px; gap: 18px;
+  min-height: 68px; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 18px;
   position: sticky; top: 0; z-index: 50;
+  /* PWA standalone iOS: respect notch / status bar / home indicator */
+  padding: env(safe-area-inset-top) max(24px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left));
+  box-sizing: border-box;
 }
 .app-header__title {
   position: absolute; left: 50%; transform: translateX(-50%);
@@ -615,7 +618,8 @@ input, textarea, select { font-family: inherit; color: inherit; }
   border-bottom: 1px solid var(--border-soft);
 }
 .landing-nav__inner {
-  max-width: 1280px; margin: 0 auto; padding: 16px 32px;
+  max-width: 1280px; margin: 0 auto;
+  padding: calc(16px + env(safe-area-inset-top)) max(32px, env(safe-area-inset-right)) 16px max(32px, env(safe-area-inset-left));
   display: flex; align-items: center; gap: 24px;
 }
 .landing-nav__links { display: flex; gap: 26px; margin-left: 36px; }
@@ -656,7 +660,10 @@ input, textarea, select { font-family: inherit; color: inherit; }
 /* Override des fontSizes inline et des grid 2-col pour rentrer dans le viewport */
 @media (max-width: 720px) {
   /* Nav : padding réduit, brand plus petit, liens cachés (les sections sont accessibles via scroll) */
-  .landing-nav__inner { padding: 10px 12px; gap: 6px; }
+  .landing-nav__inner {
+    padding: calc(10px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+    gap: 6px;
+  }
   .landing-nav__inner > div:first-of-type span { font-size: 15px; } /* CVitalis brand text */
   .landing-nav__links { display: none; }
   .landing-nav .btn--sm { padding: 6px 10px; font-size: 11px; }
@@ -825,7 +832,10 @@ input, textarea, select { font-family: inherit; color: inherit; }
 /* ---------- Mobile (≤600px) — corrige l'overflow + tailles ---------- */
 @media (max-width: 600px) {
   /* Header : padding réduit + masque le nom du user-chip (avatar seul) */
-  .app-header { padding: 0 14px; gap: 10px; }
+  .app-header {
+    padding: env(safe-area-inset-top) max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+    gap: 10px;
+  }
   .user-chip__name { display: none; }
   .app-header__right { gap: 8px; }
 
