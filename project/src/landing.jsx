@@ -389,8 +389,7 @@ const Landing = ({ navigate }) => {
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
             <LangSwitch/>
-            <button className="btn btn--ghost btn--sm" onClick={() => navigate("/auth/login")}>{t("nav.login")}</button>
-            <button className="btn btn--primary btn--sm" onClick={() => navigate("/auth/signup")}>{t("nav.createCv")}</button>
+            <button className="btn btn--primary btn--sm" onClick={() => navigate("/auth/login")}>{t("nav.login")}</button>
           </div>
         </div>
       </nav>
