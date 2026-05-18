@@ -740,18 +740,19 @@ const AudioRecorder = ({ onBlob, existingUrl, onRemove }) => {
 };
 
 // ---------------------------------------------------------------------------
-// imageToWebP — convertit une image (JPEG/PNG/WebP) en Blob WebP qualité 4K
-// Quality 97% + max 3200px + lissage HQ pour rendu ultra-net partout
+// imageToWebP — convertit toute image en Blob WebP format A4 (1:√2)
+// L'image est centrée sur fond blanc dans le canvas A4 — proportions conservées.
 // ---------------------------------------------------------------------------
+const A4_RATIO = 1 / Math.SQRT2; // largeur/hauteur ≈ 0.7071
+
 function imageToWebP(file, maxWidth = 3200, quality = 0.97) {
   return new Promise((resolve, reject) => {
-    // Garde-fous : type + taille AVANT de charger en mémoire (anti-DoS navigateur)
     if (!file || typeof file !== "object") return reject(new Error("Fichier invalide"));
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (file.type && !allowedTypes.includes(file.type)) {
       return reject(new Error("Format non supporté (JPEG/PNG/WebP uniquement)"));
     }
-    const MAX_BYTES = 15 * 1024 * 1024; // 15 MB — largement suffisant pour un scan CV
+    const MAX_BYTES = 15 * 1024 * 1024;
     if (file.size > MAX_BYTES) {
       return reject(new Error("Image trop volumineuse (max 15 Mo)"));
     }
@@ -759,17 +760,37 @@ function imageToWebP(file, maxWidth = 3200, quality = 0.97) {
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
+
+      // Canvas A4 haute résolution
+      const canvasW = maxWidth;
+      const canvasH = Math.round(maxWidth / A4_RATIO); // 3200 × 4525 px
+
       const canvas = document.createElement('canvas');
-      const scale = Math.min(1, maxWidth / img.width);
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
+      canvas.width = canvasW;
+      canvas.height = canvasH;
       const ctx = canvas.getContext('2d');
-      // Lissage haute qualité (bicubique) pour préserver la netteté du texte
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
+
+      // Fond blanc
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, canvasW, canvasH);
+
+      // Letterbox : fit l'image dans le cadre A4 sans déformer
+      const imgRatio = img.width / img.height;
+      let drawW, drawH;
+      if (imgRatio > A4_RATIO) {
+        drawW = canvasW;
+        drawH = Math.round(canvasW / imgRatio);
+      } else {
+        drawH = canvasH;
+        drawW = Math.round(canvasH * imgRatio);
+      }
+      const offsetX = Math.round((canvasW - drawW) / 2);
+      const offsetY = Math.round((canvasH - drawH) / 2);
+
+      ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+
       canvas.toBlob((blob) => {
         if (blob) resolve(blob);
         else reject(new Error('Conversion WebP échouée'));
