@@ -659,9 +659,11 @@ input, textarea, select { font-family: inherit; color: inherit; }
   .landing-nav__inner { padding: 10px 12px; gap: 6px; }
   .landing-nav__inner > div:first-of-type span { font-size: 15px; } /* CVitalis brand text */
   .landing-nav__links { display: none; }
-  .landing-nav .btn--sm { padding: 6px 10px; font-size: 11px; }
-  /* Masque "Se connecter" sur mobile — trop de boutons, ça déborde à droite */
-  .landing-nav .btn--ghost { display: none; }
+  .landing-nav .btn--sm { padding: 5px 8px; font-size: 10.5px; white-space: nowrap; }
+  /* Empêche le div des boutons nav de déborder — min-width:0 permet la compression flex */
+  .landing-nav__inner > div:last-child { min-width: 0; flex-shrink: 1; }
+  /* Réduit le logo dans la nav sur mobile pour libérer de la place */
+  .landing-nav .brand img { width: 26px !important; height: 26px !important; }
 
   /* Hero : titre + paragraphe rétrécis, padding réduit */
   .hero { padding: 24px 16px 36px; gap: 24px; }
