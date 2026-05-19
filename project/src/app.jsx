@@ -48,6 +48,30 @@ const LoadingScreen = () => (
   </div>
 );
 
+// Stale-while-revalidate cache for the user's profile + CVs in localStorage.
+// On launch we hydrate React state immediately from this cache (no network),
+// then refetch from Supabase in the background and replace if the data has
+// changed. Result: 2nd+ launch shows the app instantly with no LoadingScreen
+// hang, while still ensuring stats / updates appear in the same session.
+const SWR_CACHE_KEY = 'cvitalis.userdata.v1';
+function readUserCache(userId) {
+  try {
+    const raw = localStorage.getItem(SWR_CACHE_KEY);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    if (!c || c.userId !== userId) return null;
+    return c;
+  } catch { return null; }
+}
+function writeUserCache(userId, profile, cvs) {
+  try {
+    localStorage.setItem(SWR_CACHE_KEY, JSON.stringify({ userId, profile, cvs, ts: Date.now() }));
+  } catch {}
+}
+function clearUserCache() {
+  try { localStorage.removeItem(SWR_CACHE_KEY); } catch {}
+}
+
 function AppInner() {
   const [route, navigate] = useHashRoute();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -112,6 +136,8 @@ function AppInner() {
         plan: 'Pro',
         renewalDate: '',
       };
+      // 5. Persist to localStorage for instant hydration on next launch
+      writeUserCache(userId, profile, cvData);
     } catch (err) {
       if (window.logErr) window.logErr("Erreur chargement données utilisateur:", err);
     }
@@ -125,7 +151,30 @@ function AppInner() {
       if (!mounted) return;
       setSession(s);
       if (s) {
-        loadUserData(s.user.id).then(() => { if (mounted) setLoading(false); });
+        // STALE-WHILE-REVALIDATE: si on a un cache local pour cet user,
+        // on hydrate immédiatement les states et on cache le LoadingScreen
+        // → l'app apparaît INSTANTANÉMENT (pas de wait sur le réseau).
+        // En parallèle, loadUserData refetch Supabase en background et
+        // remplace silencieusement si les données ont changé.
+        const cached = readUserCache(s.user.id);
+        if (cached) {
+          setProfile(cached.profile);
+          setCvs(cached.cvs);
+          if (cached.profile.langue_interface) setLang(cached.profile.langue_interface);
+          window.MOCK.initialUser = {
+            firstName: cached.profile.prenom || '',
+            lastName: cached.profile.nom || '',
+            email: cached.profile.email || '',
+            phone: cached.profile.telephone || '',
+            plan: 'Pro',
+            renewalDate: '',
+          };
+          setLoading(false); // app affiché tout de suite
+          loadUserData(s.user.id); // refresh silencieux en background
+        } else {
+          // Pas de cache → loading screen jusqu'à la fin du fetch
+          loadUserData(s.user.id).then(() => { if (mounted) setLoading(false); });
+        }
       } else {
         setLoading(false);
       }
@@ -148,6 +197,7 @@ function AppInner() {
       } else if (event === 'SIGNED_OUT' || !s) {
         setProfile(null);
         setCvs([]);
+        clearUserCache(); // jette le cache stale-while-revalidate
         window.MOCK.initialUser = { firstName: '', lastName: '', email: '', phone: '', plan: 'Pro', renewalDate: '' };
         setLoading(false);
       }
@@ -181,6 +231,16 @@ function AppInner() {
       }
     };
   }, []);
+
+  // Re-write the SWR cache whenever profile or cvs change locally (e.g.
+  // after creating a CV, deleting one, editing the profile). Keeps the
+  // cached data consistent with the live state so the next launch's
+  // instant hydration matches what the user last saw.
+  useEffect(() => {
+    if (session && profile && !loading) {
+      writeUserCache(session.user.id, profile, cvs);
+    }
+  }, [session, profile, cvs, loading]);
 
   // Title resolution
   const titleFor = (r) => {
