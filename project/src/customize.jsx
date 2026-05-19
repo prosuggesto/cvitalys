@@ -368,13 +368,6 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
                   placeholder="Hôtellerie"
                 />
               </div>
-              <Field label={t("custom.accent")}>
-                <select className="select" value={local.accent} onChange={(e) => update({ accent: e.target.value })}>
-                  <option value="warm">{t("custom.accent.warm")}</option>
-                  <option value="sage">{t("custom.accent.sage")}</option>
-                  <option value="ink">{t("custom.accent.ink")}</option>
-                </select>
-              </Field>
               <Field label="Langue de la page publique" hint="Langue affichée aux recruteurs qui scannent ce CV">
                 <select
                   className="select"
