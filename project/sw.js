@@ -1,21 +1,20 @@
 // CVitalis Service Worker
 // Strategies:
-//   App shell (HTML, CSS, JSX) → cache-first → instant, predictable load
-//   Static assets (images, fonts, CDN scripts) → cache-first
-//   Supabase API → network-first with cache fallback (offline support)
+//   HTML + JSX + CSS  → network-first → user always gets the latest code
+//                       on every online launch. Falls back to cache when
+//                       offline so "Présenter au recruteur" still works.
+//   Static assets     → cache-first → fast, offline-friendly (images, icons,
+//   (images, fonts)     fonts rarely change, no need to refetch).
+//   Supabase API      → network-first with cache fallback.
 //
-// Auto-update flow:
-//   1. CACHE_VERSION is bumped on every Vercel build by
-//      scripts/bump-sw-version.js (uses git commit SHA).
-//   2. Browser fetches new sw.js (Vercel serves it no-cache).
-//   3. Different bytes → browser installs the new SW in the background
-//      and PRE-CACHES the new shell.
-//   4. New SW stays in "waiting" while the user is using the app.
-//   5. Next launch (PWA reopened from home screen) → new SW activates
-//      automatically → user sees the new version, no reload prompt,
-//      no mid-session interruption.
+// Why network-first on the code: previously cache-first on HTML meant the
+// SW kept serving the OLD HTML/JSX from launch N for several launches
+// after a deploy, which created the perceived "crash and reload" because
+// when the new SW eventually took over, files inconsistently flipped.
+// Network-first means every online launch gets fresh code immediately, no
+// hidden SW dance, no lifecycle reloading.
 
-const CACHE_VERSION = 'cvitalys-dev';
+const CACHE_VERSION = 'cvitalys-v1';
 
 // App shell — these get stale-while-revalidate so deploys propagate silently
 const SHELL = [
@@ -117,10 +116,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin: app shell + static assets all go cache-first.
-  // Updates land on next launch via the new SW (see install/activate above).
+  // Same-origin app code (HTML + JSX + CSS + manifest) → network-first.
+  // Static assets (images, fonts, qrcode lib, icons) → cache-first.
+  // This split means a code deploy is visible on the next online launch
+  // without requiring a new SW activation cycle, while offline-critical
+  // assets stay snappy and cached.
   if (url.origin === self.location.origin) {
-    event.respondWith(cacheFirst(request));
+    if (isCodeUrl(url.pathname)) {
+      event.respondWith(networkFirst(request));
+    } else {
+      event.respondWith(cacheFirst(request));
+    }
     return;
   }
 
@@ -133,6 +139,14 @@ self.addEventListener('fetch', (event) => {
   // Default: just go to network
   event.respondWith(fetch(request).catch(() => new Response('', { status: 503 })));
 });
+
+function isCodeUrl(pathname) {
+  if (pathname === '/' || pathname === '/CVitalis.html') return true;
+  if (pathname === '/styles.css') return true;
+  if (pathname === '/manifest.webmanifest') return true;
+  if (pathname.startsWith('/src/') && pathname.endsWith('.jsx')) return true;
+  return false;
+}
 
 // ─── Strategies ───────────────────────────────────────────────────────────────
 

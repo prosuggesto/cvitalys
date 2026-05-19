@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node scripts/bump-sw-version.js",
+  "buildCommand": "echo no-build",
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/", "destination": "/project/CVitalis.html" },
