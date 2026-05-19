@@ -1178,4 +1178,4 @@ const DateTimePickerModal = ({ value, onConfirm, onClear, onClose }) => {
   );
 };
 
-Object.assign(window, { Modal, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder, ImagePreview, ZoomableImage, DateTimePicker, fmtDateTimeFr, imageToWebP });
+Object.assign(window, { Modal, FullPage, Toggle, Field, ComboboxField, QRBlock, CVPreviewVisual, Toast, useToast, AudioPlayerCustom, AudioRecorder, ImagePreview, ZoomableImage, DateTimePicker, fmtDateTimeFr, imageToWebP });

@@ -923,6 +923,21 @@ input, textarea, select { font-family: inherit; color: inherit; }
   }
 }
 
+/* ===== Landing analytics-preview AUDIO tab — mobile stack =====
+   On mobile the row [0:47 | 189 | 142] overflows to the right because
+   the labels + numbers are wider than the available width. Stack the
+   three blocks vertically so everything stays inside the panel. */
+@media (max-width: 720px) {
+  .analytics-audio-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+  }
+  .analytics-audio-stats {
+    width: 100%;
+  }
+}
+
 /* ===== PWA standalone iOS — must come LAST so it overrides the mobile
    media query above. In standalone there's no Safari URL bar so we add
    explicit padding for the iOS notch / status bar / home indicator

@@ -197,20 +197,22 @@ const AnalyticsPreview = () => {
       )}
 
       {tab === "audio" && (
-        <div style={{ padding: 22, background: "#1B1814", color: "#F7F3EC", borderRadius: 14 }}>
-          <div className="row gap-24" style={{ alignItems: "flex-end" }}>
+        <div className="analytics-audio-panel" style={{ padding: 22, background: "#1B1814", color: "#F7F3EC", borderRadius: 14 }}>
+          <div className="analytics-audio-row row gap-24" style={{ alignItems: "flex-end" }}>
             <div>
               <div className="display" style={{ fontSize: 40, fontWeight: 500, color: "#F7F3EC", lineHeight: 1 }}>0:47</div>
               <div style={{ fontSize: 12, color: "rgba(247,243,236,0.6)", marginTop: 4 }}>{t("landing.analytics.audio.avg")}</div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1 }}>
-              <div>
+            {/* alignItems: end → 189 et 142 collés en bas du bloc même si les
+                labels au-dessus ont des hauteurs différentes (wrap 1 vs 2 lignes) */}
+            <div className="analytics-audio-stats" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1, alignItems: "end" }}>
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
                 <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(247,243,236,0.5)", marginBottom: 4 }}>{t("landing.analytics.audio.launched")}</div>
-                <div className="display" style={{ fontSize: 22, fontWeight: 500, color: "#F7F3EC" }}>189</div>
+                <div className="display" style={{ fontSize: 22, fontWeight: 500, color: "#F7F3EC", lineHeight: 1 }}>189</div>
               </div>
-              <div>
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
                 <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(247,243,236,0.5)", marginBottom: 4 }}>{t("landing.analytics.audio.stopped")}</div>
-                <div className="display" style={{ fontSize: 22, fontWeight: 500, color: "var(--gold-soft)" }}>142</div>
+                <div className="display" style={{ fontSize: 22, fontWeight: 500, color: "var(--gold-soft)", lineHeight: 1 }}>142</div>
               </div>
             </div>
           </div>

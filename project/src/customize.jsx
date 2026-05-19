@@ -446,26 +446,45 @@ const CustomizeEdit = ({ cv, session, profile, onSave, onPreview, toast, navigat
         </div>
       </div>
 
-      {/* Modal "CV complet" — identique à la page publique (Voir le CV) */}
-      <Modal open={viewerOpen} onClose={() => setViewerOpen(false)} width={1100}>
-        <div style={{ padding: 30 }}>
-          <div className="eyebrow" style={{ marginBottom: 8 }}>{local.name}</div>
-          <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: "0 0 6px" }}>{t("public.cvComplete")}</h2>
-          <p className="muted" style={{ margin: "0 0 18px", fontSize: 13 }}>
-            <kbd style={{ padding: '2px 6px', background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11 }}>Ctrl</kbd> + molette pour zoomer · cliquer-glisser pour déplacer · double-clic pour réinitialiser
-          </p>
-          <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
-            {displayImageUrl ? (
-              <ZoomableImage src={displayImageUrl}/>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, color: "var(--muted)" }}>
-                <I.Cv size={40} stroke="var(--subtle)"/>
-                <div style={{ fontSize: 14 }}>Aucun CV importé pour ce profil</div>
-              </div>
-            )}
+      {/* Modal "CV complet" — fullscreen sur mobile, modal classique desktop */}
+      {isMobile ? (
+        <FullPage open={viewerOpen} onClose={() => setViewerOpen(false)}>
+          <div style={{ padding: "64px 18px 24px", maxWidth: 720, margin: "0 auto" }}>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>{local.name}</div>
+            <h2 className="display" style={{ fontSize: 24, fontWeight: 500, margin: "0 0 18px" }}>{t("public.cvComplete")}</h2>
+            <div style={{ display: "flex", justifyContent: "center", padding: "10px 0" }}>
+              {displayImageUrl ? (
+                <ZoomableImage src={displayImageUrl}/>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, color: "var(--muted)" }}>
+                  <I.Cv size={40} stroke="var(--subtle)"/>
+                  <div style={{ fontSize: 14 }}>Aucun CV importé pour ce profil</div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </Modal>
+        </FullPage>
+      ) : (
+        <Modal open={viewerOpen} onClose={() => setViewerOpen(false)} width={1100}>
+          <div style={{ padding: 30 }}>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>{local.name}</div>
+            <h2 className="display" style={{ fontSize: 28, fontWeight: 500, margin: "0 0 6px" }}>{t("public.cvComplete")}</h2>
+            <p className="muted" style={{ margin: "0 0 18px", fontSize: 13 }}>
+              <kbd style={{ padding: '2px 6px', background: 'var(--bg-soft)', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11 }}>Ctrl</kbd> + molette pour zoomer · cliquer-glisser pour déplacer · double-clic pour réinitialiser
+            </p>
+            <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+              {displayImageUrl ? (
+                <ZoomableImage src={displayImageUrl}/>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, color: "var(--muted)" }}>
+                  <I.Cv size={40} stroke="var(--subtle)"/>
+                  <div style={{ fontSize: 14 }}>Aucun CV importé pour ce profil</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>);
 };
 
