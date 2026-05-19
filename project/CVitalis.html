@@ -1,6 +1,16 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" style="background:#F7F3EC">
 <head>
+<!-- This MUST be the very first <style> in <head> so the cream background
+     is painted by the WebView before any external CSS, fonts, or scripts
+     load. Without it, the WebView paints with its default transparent /
+     white background during the ~200-500 ms between Chrome's PWA system
+     splash terminating and our preboot div being parsed — and the user
+     briefly sees their Android home-screen launcher through the
+     transparent WebView. The duplicate inline style on <html> above is
+     belt-and-braces (some Android Chrome versions check the root element
+     before encountering <head>). -->
+<style>html,body{background:#F7F3EC;margin:0}</style>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="strict-origin-when-cross-origin">
