@@ -116,36 +116,23 @@
 <script type="text/babel" src="src/install-tutorial.jsx"></script>
 <script type="text/babel" src="src/app.jsx"></script>
 
-<!-- Service Worker registration — silent updates gated on the loading screen.
-     React sets window.__cvitalysLoading = true while the LoadingScreen
-     is on screen. We only reload when that flag is true → the reload
-     happens during the loading screen and is invisible to the user. If
-     the SW update arrives after the user is in the app, the new files
-     stay cached and apply on the next launch — no mid-session disruption. -->
+<!-- Service Worker registration — silent install, no in-session reload.
+     The SW (sw.js) deliberately omits self.clients.claim() so a newly
+     installed SW does NOT take over the currently-open page. The page
+     finishes its life with the old SW; the new SW takes control on
+     the next cold launch when a fresh WebView is created. This avoids
+     the "splash → crash → loading screen → app" effect on Android,
+     where every code deploy used to force an in-session reload via
+     controllerchange. Updates still propagate — just on the next
+     cold start, not mid-session. -->
 <script>
-// Set the flag synchronously so the gate works even before React mounts.
-window.__cvitalysLoading = true;
-
-(function () {
-  if (!('serviceWorker' in navigator)) return;
-
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
       .then(function (reg) { reg.update(); })
       .catch(function (err) { console.warn('[SW] Registration failed:', err); });
-
-    var refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', function () {
-      if (refreshing) return;
-      // Reload only if the LoadingScreen is still showing (React updates
-      // the flag when it hides the screen). Otherwise, defer to next launch.
-      if (window.__cvitalysLoading === true) {
-        refreshing = true;
-        window.location.reload();
-      }
-    });
   });
-})();
+}
 </script>
 </body>
 </html>

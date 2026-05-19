@@ -84,15 +84,22 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// ─── Activate: delete old caches + claim clients so future fetches go
-// through the new SW (current page keeps its old in-memory JS until the
-// page-side reload gate fires — or until the next launch).
+// ─── Activate: delete old caches. Does NOT call self.clients.claim().
+// Reasoning: claim() makes the new SW take over the page that's already
+// open, which fires `controllerchange` on the client and used to trigger
+// our reload gate in CVitalis.html → visible "crash and reload" on every
+// PWA launch (because we auto-bump CACHE_VERSION on every Vercel build,
+// so almost every launch detects a new sw.js). Without claim, the new
+// SW stays "active" in the background; the current page keeps using
+// the old SW for the remainder of its life, and the new SW automatically
+// controls the page on the next full reload (e.g. next cold launch of
+// the PWA, or when the WebView is killed by Android and the user
+// reopens the app). Updates still propagate, just on next cold start.
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
       await Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)));
-      await self.clients.claim();
     })()
   );
 });

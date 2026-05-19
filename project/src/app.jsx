@@ -58,12 +58,6 @@ function AppInner() {
   const { Toast: T, show: toast } = useToast();
   const { t, setLang } = useT();
 
-  // Expose loading state to the SW registration script (in CVitalis.html).
-  // The SW only triggers a silent reload while this flag is true, so updates
-  // apply during the loading screen and never interrupt the user.
-  useEffect(() => {
-    window.__cvitalysLoading = loading;
-  }, [loading]);
 
   // Charger le profil et les CVs après authentification.
   // Implémenté en async/await pour pouvoir poser TOUS les setStates dans le
