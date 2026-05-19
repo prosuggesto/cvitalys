@@ -47,6 +47,8 @@ const STATIC_ASSETS = [
   '/assets/logo.png',
   '/assets/icons/icon-192.png',
   '/assets/icons/icon-512.png',
+  '/assets/icons/icon-maskable-192.png',
+  '/assets/icons/icon-maskable-512.png',
   '/assets/icons/apple-touch-icon.png',
   '/assets/icons/favicon-32.png',
   '/assets/install-tutorial/step1.png',
