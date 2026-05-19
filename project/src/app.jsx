@@ -92,6 +92,14 @@ function AppInner() {
   const [profile, setProfile] = useState(initialCache?.profile || null);
   const [cvs, setCvs] = useState(initialCache?.cvs || []);
   const [loading, setLoading] = useState(!initialCache);
+  // sessionChecked = true once api.getSession() has resolved. Until then,
+  // we don't know whether the user has a valid session even if a SWR cache
+  // exists. Without this flag, the route guards would briefly redirect to
+  // /auth/login on first render (because `session` state is null until
+  // useEffect runs) — and that's the "écran d'accueil" flash the user
+  // kept seeing on Android: the Login form rendering for ~50-200 ms
+  // between React mount and session restoration.
+  const [sessionChecked, setSessionChecked] = useState(false);
   const { Toast: T, show: toast } = useToast();
   const { t, setLang } = useT();
 
@@ -176,6 +184,7 @@ function AppInner() {
     api.getSession().then((s) => {
       if (!mounted) return;
       setSession(s);
+      setSessionChecked(true);
       if (s) {
         // STALE-WHILE-REVALIDATE: si on a un cache local pour cet user,
         // on hydrate immédiatement les states et on cache le LoadingScreen
@@ -304,9 +313,20 @@ function AppInner() {
   if (loading) return <LoadingScreen/>;
 
   // PWA standalone : jamais de landing page → connecté direct sur /app/cvs,
-  // sinon direct sur /auth/login (l'utilisateur peut aller à /auth/signup depuis là)
+  // sinon direct sur /auth/login.
+  // IMPORTANT : on attend que la session soit vérifiée OU qu'on ait un
+  // cache SWR (proxy "probablement loggé") avant de décider la cible.
+  // Sans ça, le premier render fait `session ? /app/cvs : /auth/login`
+  // avec session encore null (useEffect pas encore exécuté) → flash de
+  // /auth/login avant que getSession ait résolu → c'est ce que l'user
+  // perçoit comme "l'écran d'accueil" qui apparait sur Android.
   if (isPwaStandalone() && (route === "/" || route === "")) {
-    navigate(session ? "/app/cvs" : "/auth/login");
+    if (!sessionChecked && !initialCache) {
+      // Aucune indication de session encore → on attend, on montre le loader
+      return <LoadingScreen/>;
+    }
+    const probablyLoggedIn = !!session || !!initialCache;
+    navigate(probablyLoggedIn ? "/app/cvs" : "/auth/login");
     return null;
   }
 
@@ -316,8 +336,13 @@ function AppInner() {
     return null;
   }
 
-  // Protéger les routes /app/*
-  if (isApp && !session) {
+  // Protéger les routes /app/*. On ne redirige vers /auth/login QUE si la
+  // session a été vérifiée ET qu'on a confirmé l'absence de session. Avant
+  // que sessionChecked soit true, on rend l'app (avec données du cache si
+  // dispo) pour éviter un flash de Login au premier render. Si la cache
+  // existait mais s'avère stale (déconnecté ailleurs), on la nettoie.
+  if (isApp && !session && sessionChecked) {
+    if (initialCache) clearUserCache();
     navigate("/auth/login");
     return null;
   }
