@@ -48,14 +48,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 
+<!-- Preload the brand logo so the preboot screen has it ready on first
+     paint instead of waiting for the image fetch — the logo is the most
+     visible element of the loading state. -->
+<link rel="preload" href="assets/logo.png" as="image">
+
 <!-- Pre-rendered loading state — fills the gap on Android between the
      system PWA splash disappearing and React mounting + rendering its
-     own <LoadingScreen/>. Without this, Android shows a brief white
-     flash that looks like the app crashed and relaunched. The visual
-     here is byte-equal to <LoadingScreen/> (same cream bg, same logo
-     size, same spinner colors + animation) so the transition is
-     seamless. React replaces this content when createRoot().render()
-     commits its first paint. -->
+     own <LoadingScreen/>. The visual MUST match <LoadingScreen/> byte-
+     for-byte (same cream bg, same Brand layout = logo + "CVitalis"
+     text, same spinner) so the transition is invisible. React replaces
+     this content when createRoot().render() commits its first paint.
+     If the user has a SWR cache, app.jsx starts with loading=false and
+     skips LoadingScreen entirely — preboot → app directly. -->
 <style>
   .preboot {
     position: fixed; inset: 0;
@@ -64,10 +69,19 @@
     flex-direction: column; gap: 20px;
     z-index: 9999;
   }
+  .preboot__brand {
+    display: inline-flex; align-items: center; gap: 12px;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: 28px;
+    color: #1B1814;
+    line-height: 1;
+  }
   .preboot__logo {
     width: 42px; height: 42px;
     object-fit: contain;
     mix-blend-mode: multiply;
+    display: block; flex-shrink: 0;
   }
   .preboot__spinner {
     width: 32px; height: 32px;
@@ -82,7 +96,10 @@
 <body>
 <div id="root">
   <div class="preboot">
-    <img src="assets/logo.png" alt="" class="preboot__logo">
+    <span class="preboot__brand">
+      <img src="assets/logo.png" alt="" class="preboot__logo">
+      <span>CVitalis</span>
+    </span>
     <div class="preboot__spinner"></div>
   </div>
 </div>

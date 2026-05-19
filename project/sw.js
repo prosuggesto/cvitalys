@@ -59,48 +59,35 @@ const STATIC_ASSETS = [
 const CDN_HOSTS = ['unpkg.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 const SUPABASE_HOST = 'supabase.co';
 
-// ─── Install: pre-cache everything, bypass HTTP cache for shell ──────────────
-// skipWaiting() is called so the new SW activates as soon as it's installed,
-// without waiting for all clients to close. The page-side reload that picks
-// up the new code is GATED by user interaction (see CVitalis.html): if the
-// user hasn't tapped/typed anything yet, the page reloads silently during
-// the loading screen; otherwise the new version waits for the next launch.
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE_VERSION);
-      const shellRequests = SHELL.map((url) => new Request(url, { cache: 'reload' }));
-      const staticRequests = STATIC_ASSETS.map((url) => new Request(url));
-      await Promise.all(
-        [...shellRequests, ...staticRequests].map((req) =>
-          fetch(req)
-            .then((res) => res.ok && cache.put(req, res))
-            .catch(() => {})
-        )
-      );
-      self.skipWaiting();
-    })()
-  );
+// ─── Install: minimal, no pre-cache. ─────────────────────────────────────────
+// Previously the install handler fetched ~30 shell + static files in
+// parallel with { cache: 'reload' } to bypass the HTTP cache. On a 2nd
+// Android PWA launch where the SW was being reinstalled (e.g. after a
+// deploy that bumped CACHE_VERSION), this caused a fetch storm during
+// WebView startup which Android could interpret as resource pressure
+// and kill the WebView. The user saw the home screen flash through
+// while Android relaunched the PWA.
+//
+// Now: install does NOTHING except skipWaiting. Files get cached
+// LAZILY as the fetch handler intercepts requests during normal use.
+// First online use after install populates the cache; subsequent
+// offline launches still work because the cache is already filled.
+self.addEventListener('install', () => {
+  self.skipWaiting();
 });
 
-// ─── Activate: delete old caches. Does NOT call self.clients.claim().
-// Reasoning: claim() makes the new SW take over the page that's already
-// open, which fires `controllerchange` on the client and used to trigger
-// our reload gate in CVitalis.html → visible "crash and reload" on every
-// PWA launch (because we auto-bump CACHE_VERSION on every Vercel build,
-// so almost every launch detects a new sw.js). Without claim, the new
-// SW stays "active" in the background; the current page keeps using
-// the old SW for the remainder of its life, and the new SW automatically
-// controls the page on the next full reload (e.g. next cold launch of
-// the PWA, or when the WebView is killed by Android and the user
-// reopens the app). Updates still propagate, just on next cold start.
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)));
-    })()
-  );
+// ─── Activate: do nothing. Old caches accumulate harmlessly. ─────────────────
+// Previously the activate handler enumerated cache keys and deleted any
+// that didn't match CACHE_VERSION. Problem: if the OLD SW is still
+// controlling the currently-open page (we deliberately don't call
+// clients.claim()), and the NEW SW deletes the OLD SW's cache during
+// activate, the old SW suddenly can't serve the files it had cached
+// and falls back to network — which can cause partial-loaded states
+// or even WebView restart on Android. Letting old caches sit is
+// inefficient but safe; storage cleanup happens naturally as the OS
+// reclaims space.
+self.addEventListener('activate', () => {
+  // intentionally empty
 });
 
 // ─── Fetch routing ────────────────────────────────────────────────────────────

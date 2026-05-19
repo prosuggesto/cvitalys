@@ -76,11 +76,37 @@ function AppInner() {
   const [route, navigate] = useHashRoute();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [cvs, setCvs] = useState([]);
+  // Read SWR cache SYNCHRONOUSLY at component init so we can decide
+  // whether to render LoadingScreen on the very first paint, BEFORE any
+  // useEffect runs. Without this, even with cache, the initial render
+  // showed LoadingScreen for ~100-500 ms until useEffect could hydrate
+  // — that's the flash the Android user kept seeing as image 3 in their
+  // screenshots. With cache present we initialize loading=false and the
+  // first React paint is the actual app, not LoadingScreen.
+  const initialCache = (() => {
+    try {
+      const raw = localStorage.getItem('cvitalis.userdata.v1');
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  })();
+  const [profile, setProfile] = useState(initialCache?.profile || null);
+  const [cvs, setCvs] = useState(initialCache?.cvs || []);
+  const [loading, setLoading] = useState(!initialCache);
   const { Toast: T, show: toast } = useToast();
   const { t, setLang } = useT();
+
+  // Mirror cached MOCK.initialUser synchronously so AppHeader has correct
+  // avatar/name on the very first paint (instead of empty initials flashing).
+  if (initialCache?.profile) {
+    window.MOCK.initialUser = {
+      firstName: initialCache.profile.prenom || '',
+      lastName: initialCache.profile.nom || '',
+      email: initialCache.profile.email || '',
+      phone: initialCache.profile.telephone || '',
+      plan: 'Pro',
+      renewalDate: '',
+    };
+  }
 
 
   // Charger le profil et les CVs après authentification.
