@@ -357,12 +357,18 @@ const PublicCVCard = ({ cv, user, compact, onExchange, onFeedback, onViewCv, sho
 
 // Page publique chargée via shortCode depuis Supabase
 const PublicPage = ({ shortCode, navigate }) => {
-  const { t, setLang } = useT();
+  const { t, lang, setLang } = useT();
   const isMobile = useIsMobile();
   const [cvData, setCvData] = useState(null); // { cv, profil }
   const [loading, setLoading] = useState(true);
   const [exchange, setExchange] = useState(false);
   const [feedback, setFeedback] = useState(false);
+  // Snapshot the app-wide interface language at mount time so we can
+  // restore it when leaving this page. Without this, viewing a CV with
+  // langue=fr would permanently flip the logged-in user's interface to
+  // French even though their profile.langue_interface stayed 'es' in
+  // Supabase. The ref captures the value once and survives re-renders.
+  const langBeforePublic = useRef(lang);
   const [viewerOpen, setViewerOpen] = useState(false);
   const { Toast: T, show } = useToast();
   const startTimeRef = useRef(Date.now());
@@ -396,7 +402,17 @@ const PublicPage = ({ shortCode, navigate }) => {
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      // Restore the app-wide interface language. Otherwise visiting a
+      // public CV whose `langue` differs from the user's profile would
+      // permanently change the logged-in app's UI language until next
+      // login (profile in Supabase stays correct, but the running app
+      // and localStorage would drift).
+      if (langBeforePublic.current) {
+        setLang(langBeforePublic.current);
+      }
+    };
   }, [shortCode]);
 
   if (loading) {
