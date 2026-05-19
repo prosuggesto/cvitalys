@@ -49,9 +49,17 @@ const Login = ({ navigate }) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+    // Tag this as an explicit user-initiated sign-in. The auth listener in
+    // app.jsx reads this flag and only shows the LoadingScreen for explicit
+    // logins, NOT for the SIGNED_IN that Supabase auto-fires when it
+    // rehydrates the session from localStorage on a PWA cold launch.
+    // Synchronous assignment guarantees it's set before signIn's network
+    // round-trip resolves and SIGNED_IN fires (~200-500ms later).
+    window.__cvitalisExplicitLogin = true;
     api.signIn(email, password)
       .then(({ error: err }) => {
         if (err) {
+          window.__cvitalisExplicitLogin = false;
           setLoading(false);
           if (err.message && err.message.toLowerCase().includes("invalid")) {
             setError("Email ou mot de passe incorrect. Vérifiez vos identifiants.");
@@ -104,10 +112,16 @@ const Signup = ({ navigate }) => {
     if (!f.firstName || !f.lastName) { setError("Prénom et nom sont requis."); return; }
     if (f.password.length < 6) { setError("Le mot de passe doit contenir au moins 6 caractères."); return; }
     setLoading(true);
+    // Same explicit-login flag as Login.handleSubmit — when signUp returns
+    // an immediate session (email confirmation off), the auth listener will
+    // see this flag and show the LoadingScreen for the first profile+CVs
+    // load, instead of treating it as a silent auto-restore.
+    window.__cvitalisExplicitLogin = true;
     api.signUp(f.email, f.password, f.firstName, f.lastName, f.phone, f.lang)
       .then(({ data, error: err }) => {
         setLoading(false);
         if (err) {
+          window.__cvitalisExplicitLogin = false;
           if (err.message && err.message.toLowerCase().includes("already")) {
             setError("Un compte existe déjà avec cet email. Connectez-vous.");
           } else {
@@ -119,7 +133,9 @@ const Signup = ({ navigate }) => {
           // affiche le LoadingScreen pendant le chargement profil+CVs, puis
           // redirige vers /app/cvs automatiquement.
         } else {
-          // Email confirmation activée → afficher message
+          // Email confirmation activée → afficher message + reset le flag
+          // (pas de session immédiate, donc pas de SIGNED_IN à attendre)
+          window.__cvitalisExplicitLogin = false;
           setEmailSent(true);
         }
       });

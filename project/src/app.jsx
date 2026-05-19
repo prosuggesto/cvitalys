@@ -184,13 +184,30 @@ function AppInner() {
     const { data: listener } = api.onAuthChange((event, s) => {
       if (!mounted) return;
       setSession(s);
-      // Sur SIGNED_IN (login via le formulaire), on garde l'écran de
-      // chargement visible jusqu'à ce que profil + CVs soient chargés
-      // → pas de rendu intermédiaire chaotique (avatar vide, CVs qui
-      // apparaissent un par un dans le désordre, etc.)
       if (event === 'SIGNED_IN' && s) {
-        setLoading(true);
-        loadUserData(s.user.id).then(() => { if (mounted) setLoading(false); });
+        // SIGNED_IN fire dans 2 cas qu'il faut distinguer :
+        //
+        //   1. EXPLICITE — l'utilisateur vient de cliquer "Se connecter" ou
+        //      "Créer un compte". Le flag window.__cvitalisExplicitLogin a
+        //      été posé synchroniquement par Login/Signup avant l'appel
+        //      signIn/signUp. → on affiche le LoadingScreen pendant le
+        //      premier chargement profil+CVs, sinon on verrait /app/cvs
+        //      avec un avatar vide et zéro CV avant que loadUserData ne
+        //      résolve (rendu chaotique).
+        //
+        //   2. AUTO-RESTORE — Supabase a rehydraté la session depuis
+        //      localStorage au cold launch (2e+ lancement PWA Android).
+        //      L'app est déjà visible via le SWR cache → on ne TOUCHE PAS
+        //      à `loading`, sinon on déclencherait un flash LoadingScreen
+        //      qui ressemble à un crash. Juste un refresh silencieux en
+        //      background pour récupérer les nouvelles stats / CVs.
+        if (window.__cvitalisExplicitLogin) {
+          window.__cvitalisExplicitLogin = false;
+          setLoading(true);
+          loadUserData(s.user.id).then(() => { if (mounted) setLoading(false); });
+        } else {
+          loadUserData(s.user.id);
+        }
       } else if (event === 'TOKEN_REFRESHED' && s) {
         // Refresh silencieux des données en background, pas de loading screen
         loadUserData(s.user.id);
